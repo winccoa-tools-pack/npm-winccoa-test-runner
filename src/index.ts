@@ -17,5 +17,8 @@ export { executeTest, executeMultipleTests, executeTestFiles } from './api/execu
 // Export parsing API
 export { parseTestResults, parseJsonResults, parseJsonContent, findResultFiles } from './api/parsers/index.js';
 
+// Export formatters
+export * from './formatters/index.js';
+
 // TODO: Export high-level test runner
 // export { createTestRunner } from './api/test-runner.js';

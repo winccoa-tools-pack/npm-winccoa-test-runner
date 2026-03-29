@@ -127,6 +127,26 @@ export interface TestLocation {
 }
 
 /**
+ * Result of a single test file execution
+ */
+export interface TestExecutionResult {
+    /**
+     * Path to the test file
+     */
+    file: string;
+
+    /**
+     * Optional test case ID (if individual test was executed)
+     */
+    testId?: string;
+
+    /**
+     * Exit code of the test execution (null if cancelled)
+     */
+    exitCode: number | null;
+}
+
+/**
  * Options for test discovery
  */
 export interface DiscoveryOptions {

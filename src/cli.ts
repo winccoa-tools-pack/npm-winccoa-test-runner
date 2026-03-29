@@ -8,6 +8,17 @@ import { Command } from 'commander';
 import * as path from 'path';
 import { discoverTests, executeTest, executeTestFiles, parseTestResults, findResultFiles } from './index.js';
 import { TestFile } from './types/index.js';
+import {
+    formatDiscoveredTests,
+    formatDiscoveredTestsVerbose,
+    formatTestExecutionStart,
+    formatTestExecutionResult,
+    formatMultipleTestResults,
+    formatTestReport,
+    formatDiscoveredTestsJson,
+    formatTestReportJson,
+    formatTestReportJUnit,
+} from './formatters/index.js';
 
 const program = new Command();
 
@@ -50,31 +61,14 @@ program
 
             // Output results
             if (options.output === 'json') {
-                console.log(JSON.stringify(tests, null, 2));
+                console.log(formatDiscoveredTestsJson(tests));
             } else {
                 // Console format
-                console.log(`\n✓ Discovered ${tests.length} test file(s):\n`);
-                
-                for (const test of tests) {
-                    const relativePath = path.relative(projectPath, test.path);
-                    console.log(`  📄 ${relativePath}`);
-                    console.log(`     Class: ${test.className}`);
-                    console.log(`     Tests: ${test.testCases.length}`);
-                    console.log(`     Format: ${test.format || 'unknown'}`);
-                    console.log(`     Individual execution: ${test.supportsIndividualTests ? '✓' : '✗'}`);
-                    
-                    if (verbose) {
-                        console.log(`     Test cases:`);
-                        for (const tc of test.testCases) {
-                            console.log(`       - ${tc.id}`);
-                        }
-                    }
-                    console.log();
+                if (verbose) {
+                    console.log(formatDiscoveredTestsVerbose(tests, projectPath));
+                } else {
+                    console.log(formatDiscoveredTests(tests, projectPath));
                 }
-
-                // Summary
-                const totalTests = tests.reduce((sum, t) => sum + t.testCases.length, 0);
-                console.log(`📊 Summary: ${tests.length} file(s), ${totalTests} test case(s)`);
             }
 
             process.exit(0);
@@ -123,21 +117,11 @@ program
                     ? options.file 
                     : path.join(projectPath, options.file);
 
-                console.log(`\n🚀 Running test: ${path.relative(projectPath, filePath)}`);
-                
-                if (options.test) {
-                    console.log(`   Test case: ${options.test}\n`);
-                }
+                console.log(formatTestExecutionStart(filePath, options.test, projectPath));
 
                 exitCode = await executeTest(filePath, execOptions, options.test);
 
-                if (exitCode === 0) {
-                    console.log(`\n✓ Test execution completed successfully`);
-                } else if (exitCode === null) {
-                    console.log(`\n⚠ Test execution was cancelled`);
-                } else {
-                    console.log(`\n✗ Test execution failed with exit code: ${exitCode}`);
-                }
+                console.log(formatTestExecutionResult(exitCode));
             }
             // Run all tests
             else if (options.all) {
@@ -155,26 +139,9 @@ program
                 const results = await executeTestFiles(tests, execOptions);
 
                 // Show results
-                let passCount = 0;
-                let failCount = 0;
-
-                for (const result of results) {
-                    const relativePath = path.relative(projectPath, result.file);
-                    const status = result.exitCode === 0 ? '✓' : '✗';
-                    const testInfo = result.testId ? ` (${result.testId})` : '';
-                    
-                    console.log(`${status} ${relativePath}${testInfo}`);
-                    
-                    if (result.exitCode === 0) {
-                        passCount++;
-                    } else {
-                        failCount++;
-                    }
-                }
-
-                console.log(`\n📊 Summary: ${passCount} passed, ${failCount} failed`);
+                console.log(formatMultipleTestResults(results, projectPath));
                 
-                exitCode = failCount > 0 ? 1 : 0;
+                exitCode = results.some(r => r.exitCode !== 0) ? 1 : 0;
             } else {
                 console.error('❌ No test specified. Use --file, --test, or --all');
                 process.exit(1);
@@ -193,30 +160,12 @@ program
                     });
 
                     if (options.outputFormat === 'json') {
-                        console.log(JSON.stringify(result, null, 2));
+                        console.log(formatTestReportJson(result.summary, result.results, result.environment));
                     } else if (options.outputFormat === 'junit') {
-                        // TODO: JUnit formatter
-                        console.log('JUnit format not yet implemented');
+                        console.log(formatTestReportJUnit(result.summary, result.results));
                     } else {
                         // Console format
-                        console.log(`\n📊 Test Results:`);
-                        console.log(`   Total: ${result.summary.total}`);
-                        console.log(`   Passed: ${result.summary.passed}`);
-                        console.log(`   Failed: ${result.summary.failed}`);
-                        console.log(`   Aborted: ${result.summary.aborted}`);
-                        console.log(`   Duration: ${result.summary.duration}ms`);
-
-                        if (result.summary.failed > 0 || result.summary.aborted > 0) {
-                            console.log(`\n❌ Failed tests:`);
-                            for (const test of result.results) {
-                                if (test.status !== 'passed') {
-                                    console.log(`   - ${test.testId}: ${test.status}`);
-                                    if (test.message) {
-                                        console.log(`     ${test.message}`);
-                                    }
-                                }
-                            }
-                        }
+                        console.log(formatTestReport(result.summary, result.results, result.environment));
                     }
                 } else {
                     console.log('   No result files found (fullResult.json)');
@@ -275,43 +224,13 @@ program
 
             // Output results
             if (options.output === 'json') {
-                console.log(JSON.stringify(result, null, 2));
+                console.log(formatTestReportJson(result.summary, result.results, result.environment));
             } else if (options.output === 'junit') {
-                // TODO: JUnit formatter
-                console.log('JUnit format not yet implemented');
+                console.log(formatTestReportJUnit(result.summary, result.results));
             } else {
                 // Console format
                 console.log(`\n📊 Test Results from: ${path.basename(resultPath)}`);
-                console.log(`\n   Total tests: ${result.summary.total}`);
-                console.log(`   ✓ Passed: ${result.summary.passed}`);
-                console.log(`   ✗ Failed: ${result.summary.failed}`);
-                console.log(`   ⚠ Aborted: ${result.summary.aborted}`);
-                console.log(`   ⏱ Duration: ${result.summary.duration}ms`);
-
-                if (result.environment) {
-                    console.log(`\n   Environment:`);
-                    console.log(`     Host: ${result.environment.hostname}`);
-                    console.log(`     Version: ${result.environment.version}`);
-                    console.log(`     Test Framework: ${result.environment.testVersion}`);
-                }
-
-                if (result.summary.failed > 0 || result.summary.aborted > 0) {
-                    console.log(`\n❌ Failed/Aborted tests:`);
-                    for (const test of result.results) {
-                        if (test.status !== 'passed') {
-                            console.log(`\n   ${test.testId} - ${test.status.toUpperCase()}`);
-                            if (test.message) {
-                                const lines = test.message.split('\n');
-                                for (const line of lines) {
-                                    console.log(`     ${line}`);
-                                }
-                            }
-                            if (test.location) {
-                                console.log(`     📍 ${test.location.file}:${test.location.line}`);
-                            }
-                        }
-                    }
-                }
+                console.log(formatTestReport(result.summary, result.results, result.environment));
             }
 
             // Exit with appropriate code
