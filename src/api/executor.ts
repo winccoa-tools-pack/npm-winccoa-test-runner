@@ -10,6 +10,7 @@ import {
     TestResult,
     TestFilter,
     TestFile,
+    TestExecutionResult,
 } from '../types/index.js';
 
 /**
@@ -224,8 +225,8 @@ export async function executeTestFiles(
     testFiles: TestFile[],
     options: TestExecutionOptions,
     filter?: TestFilter,
-): Promise<Array<{ file: string; testId?: string; exitCode: number | null }>> {
-    const results: Array<{ file: string; testId?: string; exitCode: number | null }> = [];
+): Promise<TestExecutionResult[]> {
+    const results: TestExecutionResult[] = [];
 
     for (const testFile of testFiles) {
         // Check for cancellation
