@@ -4,8 +4,7 @@
  */
 
 import * as fs from 'fs/promises';
-import * as path from 'path';
-import { TestCase, TestFile } from '../types/index.js';
+import { TestFile } from '../types/index.js';
 
 /**
  * Internal representation of a parsed test class
@@ -22,29 +21,29 @@ interface ParsedTestClass {
 const PATTERNS = {
     /** Matches: class ClassName : OaTest */
     CLASS: /class\s+(\w+)\s*:\s*OaTest/g,
-    
+
     /** Matches: getAllTestCaseIds() { ... } (3.19 format) */
     GET_ALL_TEST_CASE_IDS: /getAllTestCaseIds\s*\(\s*\)\s*\{([^}]+)\}/s,
-    
+
     /** Matches: makeDynString(...) */
     MAKE_DYN_STRING: /makeDynString\s*\(([\s\S]*?)\)/,
-    
+
     /** Matches: "string literal" */
     STRING_LITERAL: /"([^"]+)"/g,
-    
+
     /** Matches: public int testXxx() (3.20 format) */
     TEST_METHOD: /public\s+int\s+(test\w*)\s*\(/gm,
-    
+
     /** Matches: main(...) with varargs */
     MAIN_WITH_VARARGS: /\b(void\s+)?main\s*\(\s*\.\.\.\s*\)/,
-    
+
     /** Quick check for OaTest presence */
     OATEST_QUICK: /:\s*OaTest/,
 };
 
 /**
  * Parse a CTRL test file and extract test information
- * 
+ *
  * @param filePath - Absolute path to the .ctl file
  * @returns TestFile object or null if no tests found
  */
@@ -78,7 +77,7 @@ export async function parseTestFile(filePath: string): Promise<TestFile | null> 
         return {
             path: filePath,
             className: testClass.className,
-            testCases: testClass.testCases.map(tc => ({
+            testCases: testClass.testCases.map((tc) => ({
                 id: tc.id,
                 method: format === '3.20' ? tc.id : undefined,
             })),
@@ -93,7 +92,7 @@ export async function parseTestFile(filePath: string): Promise<TestFile | null> 
 
 /**
  * Quick check if a file contains OaTest classes
- * 
+ *
  * @param filePath - Path to check
  * @returns true if file likely contains tests
  */
@@ -115,7 +114,7 @@ function findTestClasses(content: string): ParsedTestClass[] {
     // Find all classes that inherit from OaTest
     let match;
     PATTERNS.CLASS.lastIndex = 0;
-    
+
     while ((match = PATTERNS.CLASS.exec(content)) !== null) {
         const className = match[1];
         const classPosition = match.index;
@@ -228,7 +227,7 @@ function extractTestCases319(
     // Extract all string literals
     let stringMatch;
     PATTERNS.STRING_LITERAL.lastIndex = 0;
-    
+
     while ((stringMatch = PATTERNS.STRING_LITERAL.exec(argumentsString)) !== null) {
         const testCaseId = stringMatch[1];
 
@@ -256,7 +255,7 @@ function extractTestCases320(
     // Find all public int test*() methods
     let match;
     PATTERNS.TEST_METHOD.lastIndex = 0;
-    
+
     while ((match = PATTERNS.TEST_METHOD.exec(classBody)) !== null) {
         const methodName = match[1];
         const matchPosition = match.index;

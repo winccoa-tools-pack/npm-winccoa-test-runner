@@ -10,10 +10,10 @@ import { parseTestFile, containsOaTest } from '../utils/test-parser.js';
 
 /**
  * Discover all test files in a directory
- * 
+ *
  * @param options - Discovery options
  * @returns Array of discovered test files
- * 
+ *
  * @example
  * ```typescript
  * const tests = await discoverTests({
@@ -21,7 +21,7 @@ import { parseTestFile, containsOaTest } from '../utils/test-parser.js';
  *     subdirectory: 'scripts/tests',
  *     filePattern: '**\/*.ctl'
  * });
- * 
+ *
  * console.log(`Found ${tests.length} test files`);
  * tests.forEach(test => {
  *     console.log(`${test.className}: ${test.testCases.length} tests`);
@@ -29,17 +29,10 @@ import { parseTestFile, containsOaTest } from '../utils/test-parser.js';
  * ```
  */
 export async function discoverTests(options: DiscoveryOptions): Promise<TestFile[]> {
-    const {
-        rootPath,
-        subdirectory = 'scripts',
-        filePattern = '**/*.ctl',
-        includeSubprojects = true,
-    } = options;
+    const { rootPath, subdirectory = 'scripts' } = options;
 
     // Determine search directory
-    const searchPath = subdirectory
-        ? path.join(rootPath, subdirectory)
-        : rootPath;
+    const searchPath = subdirectory ? path.join(rootPath, subdirectory) : rootPath;
 
     // Check if search path exists
     try {
@@ -54,7 +47,7 @@ export async function discoverTests(options: DiscoveryOptions): Promise<TestFile
 
     // Parse each file and filter out non-test files
     const tests: TestFile[] = [];
-    
+
     for (const filePath of ctlFiles) {
         const testFile = await parseTestFile(filePath);
         if (testFile) {
@@ -67,14 +60,14 @@ export async function discoverTests(options: DiscoveryOptions): Promise<TestFile
 
 /**
  * Parse a single test file
- * 
+ *
  * @param filePath - Absolute path to the test file
  * @returns Parsed test file or null if not a valid test file
- * 
+ *
  * @example
  * ```typescript
  * const testFile = await parseSingleTestFile('/path/to/MyTest.ctl');
- * 
+ *
  * if (testFile) {
  *     console.log(`Class: ${testFile.className}`);
  *     console.log(`Tests: ${testFile.testCases.map(t => t.id).join(', ')}`);
@@ -88,10 +81,10 @@ export async function parseSingleTestFile(filePath: string): Promise<TestFile | 
 
 /**
  * Check if a file is a test file (quick check without full parsing)
- * 
+ *
  * @param filePath - Path to check
  * @returns true if file contains OaTest classes
- * 
+ *
  * @example
  * ```typescript
  * if (await isTestFile('/path/to/file.ctl')) {
@@ -133,15 +126,15 @@ async function findCtlFiles(dirPath: string): Promise<string[]> {
 
 /**
  * Get test statistics from discovered tests
- * 
+ *
  * @param tests - Array of test files
  * @returns Statistics about the discoveries tests
- * 
+ *
  * @example
  * ```typescript
  * const tests = await discoverTests({ rootPath: '/path/to/project' });
  * const stats = getDiscoveryStats(tests);
- * 
+ *
  * console.log(`Files: ${stats.totalFiles}`);
  * console.log(`Total tests: ${stats.totalTestCases}`);
  * console.log(`Individual execution support: ${stats.filesWithIndividualSupport}/${stats.totalFiles}`);
@@ -151,9 +144,9 @@ export function getDiscoveryStats(tests: TestFile[]) {
     return {
         totalFiles: tests.length,
         totalTestCases: tests.reduce((sum, file) => sum + file.testCases.length, 0),
-        filesWithIndividualSupport: tests.filter(f => f.supportsIndividualTests).length,
-        format319Count: tests.filter(f => f.format === '3.19').length,
-        format320Count: tests.filter(f => f.format === '3.20').length,
-        formatMixedCount: tests.filter(f => f.format === 'mixed').length,
+        filesWithIndividualSupport: tests.filter((f) => f.supportsIndividualTests).length,
+        format319Count: tests.filter((f) => f.format === '3.19').length,
+        format320Count: tests.filter((f) => f.format === '3.20').length,
+        formatMixedCount: tests.filter((f) => f.format === 'mixed').length,
     };
 }

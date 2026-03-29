@@ -1,6 +1,6 @@
 /**
  * JUnit XML Formatter - JUnit XML output for CI/CD integration
- * 
+ *
  * Format specification: https://llg.cubic.org/docs/junit/
  */
 
@@ -33,31 +33,37 @@ export function formatTestReportJUnit(
             line: number;
         };
     }>,
-    suiteName: string = 'WinCC OA Tests'
+    suiteName: string = 'WinCC OA Tests',
 ): string {
     const lines: string[] = [];
-    
+
     // XML header
     lines.push('<?xml version="1.0" encoding="UTF-8"?>');
-    
+
     // Testsuite element
     const timestamp = new Date().toISOString();
     const durationSeconds = (summary.duration / 1000).toFixed(3);
-    
-    lines.push(`<testsuite name="${escapeXml(suiteName)}" tests="${summary.total}" failures="${summary.failed}" skipped="${summary.aborted}" time="${durationSeconds}" timestamp="${timestamp}">`);
-    
+
+    lines.push(
+        `<testsuite name="${escapeXml(suiteName)}" tests="${summary.total}" failures="${summary.failed}" skipped="${summary.aborted}" time="${durationSeconds}" timestamp="${timestamp}">`,
+    );
+
     // Individual test cases
     for (const result of results) {
         const testDurationSeconds = result.duration ? (result.duration / 1000).toFixed(3) : '0.000';
         const className = result.testId.split('.')[0] || 'UnknownClass';
         const testName = result.testId.split('.').slice(1).join('.') || result.testId;
-        
-        lines.push(`  <testcase name="${escapeXml(testName)}" classname="${escapeXml(className)}" time="${testDurationSeconds}">`);
-        
+
+        lines.push(
+            `  <testcase name="${escapeXml(testName)}" classname="${escapeXml(className)}" time="${testDurationSeconds}">`,
+        );
+
         if (result.status === 'failed') {
             const message = result.message || 'Test failed';
-            const location = result.location ? `${result.location.file}:${result.location.line}` : '';
-            
+            const location = result.location
+                ? `${result.location.file}:${result.location.line}`
+                : '';
+
             lines.push(`    <failure message="${escapeXml(message)}">`);
             lines.push(`      ${escapeXml(message)}`);
             if (location) {
@@ -68,13 +74,13 @@ export function formatTestReportJUnit(
             const message = result.message || 'Test aborted';
             lines.push(`    <skipped message="${escapeXml(message)}"/>`);
         }
-        
+
         lines.push('  </testcase>');
     }
-    
+
     // Close testsuite
     lines.push('</testsuite>');
-    
+
     return lines.join('\n');
 }
 
@@ -95,39 +101,49 @@ export function formatMultipleTestSuitesJUnit(
                 line: number;
             };
         }>;
-    }>
+    }>,
 ): string {
     const lines: string[] = [];
-    
+
     // XML header
     lines.push('<?xml version="1.0" encoding="UTF-8"?>');
-    
+
     // Testsuites container
     const totalTests = testSuites.reduce((sum, suite) => sum + suite.summary.total, 0);
     const totalFailures = testSuites.reduce((sum, suite) => sum + suite.summary.failed, 0);
     const totalSkipped = testSuites.reduce((sum, suite) => sum + suite.summary.aborted, 0);
-    
-    lines.push(`<testsuites tests="${totalTests}" failures="${totalFailures}" skipped="${totalSkipped}">`);
-    
+
+    lines.push(
+        `<testsuites tests="${totalTests}" failures="${totalFailures}" skipped="${totalSkipped}">`,
+    );
+
     // Individual test suites
     for (const suite of testSuites) {
         const timestamp = new Date().toISOString();
         const durationSeconds = (suite.summary.duration / 1000).toFixed(3);
-        
-        lines.push(`  <testsuite name="${escapeXml(suite.name)}" tests="${suite.summary.total}" failures="${suite.summary.failed}" skipped="${suite.summary.aborted}" time="${durationSeconds}" timestamp="${timestamp}">`);
-        
+
+        lines.push(
+            `  <testsuite name="${escapeXml(suite.name)}" tests="${suite.summary.total}" failures="${suite.summary.failed}" skipped="${suite.summary.aborted}" time="${durationSeconds}" timestamp="${timestamp}">`,
+        );
+
         // Individual test cases
         for (const result of suite.results) {
-            const testDurationSeconds = result.duration ? (result.duration / 1000).toFixed(3) : '0.000';
+            const testDurationSeconds = result.duration
+                ? (result.duration / 1000).toFixed(3)
+                : '0.000';
             const className = result.testId.split('.')[0] || 'UnknownClass';
             const testName = result.testId.split('.').slice(1).join('.') || result.testId;
-            
-            lines.push(`    <testcase name="${escapeXml(testName)}" classname="${escapeXml(className)}" time="${testDurationSeconds}">`);
-            
+
+            lines.push(
+                `    <testcase name="${escapeXml(testName)}" classname="${escapeXml(className)}" time="${testDurationSeconds}">`,
+            );
+
             if (result.status === 'failed') {
                 const message = result.message || 'Test failed';
-                const location = result.location ? `${result.location.file}:${result.location.line}` : '';
-                
+                const location = result.location
+                    ? `${result.location.file}:${result.location.line}`
+                    : '';
+
                 lines.push(`      <failure message="${escapeXml(message)}">`);
                 lines.push(`        ${escapeXml(message)}`);
                 if (location) {
@@ -138,15 +154,15 @@ export function formatMultipleTestSuitesJUnit(
                 const message = result.message || 'Test aborted';
                 lines.push(`      <skipped message="${escapeXml(message)}"/>`);
             }
-            
+
             lines.push('    </testcase>');
         }
-        
+
         lines.push('  </testsuite>');
     }
-    
+
     // Close testsuites
     lines.push('</testsuites>');
-    
+
     return lines.join('\n');
 }

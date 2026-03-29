@@ -6,26 +6,26 @@
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { TestRunResult, ParseOptions, ParseFormat } from '../../types/index.js';
-import { parseJsonResults, parseJsonContent } from './json-parser.js';
+import { parseJsonResults } from './json-parser.js';
 
 // Re-export specific parsers
-export { parseJsonResults, parseJsonContent } from './json-parser.js';
+export { parseJsonResults } from './json-parser.js';
 // TODO: Add log parser when implemented
 // export { parseLogFile } from './log-parser.js';
 
 /**
  * Parse test results from a file (auto-detects format)
- * 
+ *
  * @param options - Parse options
  * @returns Parsed test results
- * 
+ *
  * @example
  * ```typescript
  * // Auto-detect format
  * const result = await parseTestResults({
  *     resultPath: '/path/to/project/fullResult.json'
  * });
- * 
+ *
  * // Force specific format
  * const result2 = await parseTestResults({
  *     resultPath: '/path/to/project/result.log',
@@ -34,11 +34,11 @@ export { parseJsonResults, parseJsonContent } from './json-parser.js';
  * ```
  */
 export async function parseTestResults(options: ParseOptions): Promise<TestRunResult> {
-    const { resultPath, format = 'auto', projectPath } = options;
+    const { resultPath, format = 'auto' } = options;
 
     // Determine format
     let detectedFormat: ParseFormat = format;
-    
+
     if (format === 'auto') {
         detectedFormat = detectFormat(resultPath);
     }
@@ -49,11 +49,11 @@ export async function parseTestResults(options: ParseOptions): Promise<TestRunRe
     switch (detectedFormat) {
         case 'json':
             return parseJsonResults(resultPath);
-        
+
         case 'log':
             // TODO: Implement log parser
             throw new Error('Log format parsing not yet implemented');
-        
+
         default:
             throw new Error(`Unknown format: ${detectedFormat}`);
     }
@@ -64,11 +64,11 @@ export async function parseTestResults(options: ParseOptions): Promise<TestRunRe
  */
 function detectFormat(filePath: string): 'json' | 'log' {
     const ext = path.extname(filePath).toLowerCase();
-    
+
     if (ext === '.json') {
         return 'json';
     }
-    
+
     if (ext === '.log' || path.basename(filePath).includes('.log')) {
         return 'log';
     }
@@ -79,14 +79,14 @@ function detectFormat(filePath: string): 'json' | 'log' {
 
 /**
  * Find result files in a project directory
- * 
+ *
  * @param projectPath - Path to WinCC OA project
  * @returns Paths to found result files
- * 
+ *
  * @example
  * ```typescript
  * const files = await findResultFiles('/path/to/project');
- * 
+ *
  * if (files.fullResult) {
  *     const result = await parseJsonResults(files.fullResult);
  * }
@@ -124,7 +124,6 @@ export async function findResultFiles(projectPath: string): Promise<{
 
         // TODO: Find log files in log/ directory
         result.logFiles = [];
-
     } catch (error) {
         console.error(`[ResultParser] Error finding result files in ${projectPath}:`, error);
     }

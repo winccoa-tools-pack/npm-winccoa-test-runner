@@ -9,13 +9,18 @@
 export * from './types/index.js';
 
 // Export discovery API
-export { discoverTests, parseSingleTestFile, isTestFile, getDiscoveryStats } from './api/discovery.js';
+export {
+    discoverTests,
+    parseSingleTestFile,
+    isTestFile,
+    getDiscoveryStats,
+} from './api/discovery.js';
 
 // Export execution API
 export { executeTest, executeMultipleTests, executeTestFiles } from './api/executor.js';
 
 // Export parsing API
-export { parseTestResults, parseJsonResults, parseJsonContent, findResultFiles } from './api/parsers/index.js';
+export { parseTestResults, parseJsonResults, findResultFiles } from './api/parsers/index.js';
 
 // Export formatters
 export * from './formatters/index.js';
