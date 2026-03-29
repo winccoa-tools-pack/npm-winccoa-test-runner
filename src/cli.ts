@@ -152,37 +152,35 @@ program
                 process.exit(1);
             }
 
-            // Parse results if available
-            if (exitCode === 0) {
-                console.log(`\n📋 Parsing test results...`);
+            // Parse results if available (parse regardless of exit code)
+            console.log(`\n📋 Parsing test results...`);
 
-                const resultFiles = await findResultFiles(projectPath);
+            const resultFiles = await findResultFiles(projectPath);
 
-                if (resultFiles.fullResult) {
-                    const result = await parseTestResults({
-                        resultPath: resultFiles.fullResult,
-                        projectPath,
-                    });
+            if (resultFiles.fullResult) {
+                const result = await parseTestResults({
+                    resultPath: resultFiles.fullResult,
+                    projectPath,
+                });
 
-                    if (options.outputFormat === 'json') {
-                        console.log(
-                            formatTestReportJson(
-                                result.summary,
-                                result.results,
-                                result.environment,
-                            ),
-                        );
-                    } else if (options.outputFormat === 'junit') {
-                        console.log(formatTestReportJUnit(result.summary, result.results));
-                    } else {
-                        // Console format
-                        console.log(
-                            formatTestReport(result.summary, result.results, result.environment),
-                        );
-                    }
+                if (options.outputFormat === 'json') {
+                    console.log(
+                        formatTestReportJson(result.summary, result.results, result.environment),
+                    );
+                } else if (options.outputFormat === 'junit') {
+                    console.log(formatTestReportJUnit(result.summary, result.results));
                 } else {
-                    console.log('   No result files found (fullResult.json)');
+                    // Console format
+                    console.log(
+                        formatTestReport(result.summary, result.results, result.environment),
+                    );
                 }
+
+                // Set exit code based on test results
+                exitCode = result.summary.failed > 0 ? 1 : 0;
+            } else {
+                console.log('   ⚠️  No result files found (fullResult.json)');
+                console.log('   Note: Test may have failed before writing results.');
             }
 
             process.exit(exitCode === 0 ? 0 : 1);

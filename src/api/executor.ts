@@ -6,6 +6,7 @@
 import * as path from 'path';
 import { CtrlComponent } from '@winccoa-tools-pack/npm-winccoa-core/types/components/implementations/CtrlComponent';
 import { TestExecutionOptions, TestExecutionResult, TestFile, TestFilter } from '../types/index.js';
+import { createResultFiles, deleteResultFiles, resultFilesExist } from '../utils/result-files.js';
 
 /**
  * Execution queue to serialize test runs
@@ -97,6 +98,16 @@ async function executeTestInternal(
     testCaseId?: string,
 ): Promise<number | null> {
     try {
+        // Step 1: Delete old result files if they exist
+        if (await resultFilesExist(options.projectPath)) {
+            console.log('[TestRunner] Deleting old result files...');
+            await deleteResultFiles(options.projectPath);
+        }
+
+        // Step 2: Create empty result files for WinCC OA to write to
+        console.log('[TestRunner] Creating result files...');
+        await createResultFiles(options.projectPath);
+
         // Create CtrlComponent instance
         const ctrl = new CtrlComponent();
 
@@ -128,6 +139,8 @@ async function executeTestInternal(
         // Handle abort signal
         if (options.signal?.aborted) {
             console.log('[TestRunner] Execution aborted');
+            // Clean up result files on abort
+            await deleteResultFiles(options.projectPath);
             return null;
         }
 
@@ -135,6 +148,13 @@ async function executeTestInternal(
         return exitCode;
     } catch (error) {
         console.error('[TestRunner] Execution error:', error);
+
+        // Clean up result files on error
+        try {
+            await deleteResultFiles(options.projectPath);
+        } catch {
+            // Ignore cleanup errors
+        }
 
         // Check if cancelled
         if (options.signal?.aborted) {

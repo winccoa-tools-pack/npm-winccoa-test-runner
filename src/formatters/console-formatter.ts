@@ -193,6 +193,49 @@ export function formatTestResultsSummary(
 }
 
 /**
+ * Format all test results (passed and failed)
+ */
+export function formatAllTestResults(
+    results: Array<{
+        testId: string;
+        status: 'passed' | 'failed' | 'aborted' | 'skipped';
+        message?: string;
+        location?: {
+            file: string;
+            line: number;
+        };
+    }>,
+): string {
+    if (results.length === 0) {
+        return '';
+    }
+
+    const lines: string[] = [];
+
+    lines.push('');
+    lines.push(chalk.bold('📋 Test Cases:'));
+
+    for (const test of results) {
+        if (test.status === 'passed') {
+            lines.push(`   ${chalk.green('✓')} ${test.testId}`);
+        } else if (test.status === 'failed') {
+            lines.push(`   ${chalk.red('✗')} ${test.testId}`);
+            if (test.message) {
+                // Show first line of message
+                const firstLine = test.message.split('\n')[0];
+                lines.push(chalk.dim(`     ${firstLine}`));
+            }
+        } else if (test.status === 'aborted') {
+            lines.push(`   ${chalk.yellow('⚠')} ${test.testId} (aborted)`);
+        } else if (test.status === 'skipped') {
+            lines.push(`   ${chalk.gray('○')} ${test.testId} (skipped)`);
+        }
+    }
+
+    return lines.join('\n');
+}
+
+/**
  * Format failed test details
  */
 export function formatFailedTests(
@@ -260,8 +303,16 @@ export function formatTestReport(
 ): string {
     const parts: string[] = [];
 
+    // Show all test results first
+    const allTestsSection = formatAllTestResults(results);
+    if (allTestsSection) {
+        parts.push(allTestsSection);
+    }
+
+    // Then show summary
     parts.push(formatTestResultsSummary(summary, environment));
 
+    // Finally show failed test details
     const failedSection = formatFailedTests(results);
     if (failedSection) {
         parts.push(failedSection);
