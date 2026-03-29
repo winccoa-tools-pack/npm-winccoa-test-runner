@@ -1,15 +1,21 @@
 /**
- * WinCC OA UI PNL/XML Converter
+ * WinCC OA Test Runner
  *
- * Provides reliable PNL ⇄ XML transformations for WinCC OA UI panels
- * using the WCCOAui manager under the hood.
+ * Headless test execution API and CLI for WinCC OA OaTest framework.
+ * Provides test discovery, execution, and result parsing capabilities.
  */
 
-// Types
-export { ConversionDirection, ConversionOptions, ConversionResult } from './types';
+// Export all types
+export * from './types/index.js';
 
-// Core converter
-export { PnlXmlConverter } from './converter';
+// Export discovery API
+export { discoverTests, parseSingleTestFile, isTestFile, getDiscoveryStats } from './api/discovery.js';
 
-// Convenience API
-export { pnlToXml, xmlToPnl } from './api';
+// Export execution API
+export { executeTest, executeMultipleTests, executeTestFiles } from './api/executor.js';
+
+// Export parsing API
+export { parseTestResults, parseJsonResults, parseJsonContent, findResultFiles } from './api/parsers/index.js';
+
+// TODO: Export high-level test runner
+// export { createTestRunner } from './api/test-runner.js';
