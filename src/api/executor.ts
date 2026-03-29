@@ -5,13 +5,7 @@
 
 import * as path from 'path';
 import { CtrlComponent } from '@winccoa-tools-pack/npm-winccoa-core/types/components/implementations/CtrlComponent';
-import {
-    TestExecutionOptions,
-    TestResult,
-    TestFilter,
-    TestFile,
-    TestExecutionResult,
-} from '../types/index.js';
+import { TestExecutionOptions, TestExecutionResult, TestFile, TestFilter } from '../types/index.js';
 
 /**
  * Execution queue to serialize test runs
@@ -46,7 +40,7 @@ class ExecutionQueue {
 
         this.running = true;
         const task = this.queue.shift();
-        
+
         if (task) {
             await task();
         }
@@ -61,12 +55,12 @@ const executionQueue = new ExecutionQueue();
 
 /**
  * Execute a single test file or test case
- * 
+ *
  * @param scriptPath - Absolute path to the test script (.ctl file)
  * @param options - Execution options
  * @param testCaseId - Optional test case ID for individual test execution
  * @returns Exit code (0 = success, non-zero = error, null = cancelled)
- * 
+ *
  * @example
  * ```typescript
  * // Execute entire test file
@@ -74,7 +68,7 @@ const executionQueue = new ExecutionQueue();
  *     '/path/to/MyTest.ctl',
  *     { projectPath: '/path/to/project' }
  * );
- * 
+ *
  * // Execute single test case
  * const exitCode = await executeTest(
  *     '/path/to/MyTest.ctl',
@@ -139,37 +133,36 @@ async function executeTestInternal(
 
         console.log(`[TestRunner] Process exited with code: ${exitCode}`);
         return exitCode;
-
     } catch (error) {
         console.error('[TestRunner] Execution error:', error);
-        
+
         // Check if cancelled
         if (options.signal?.aborted) {
             return null;
         }
-        
+
         return -1;
     }
 }
 
 /**
  * Execute multiple tests sequentially
- * 
+ *
  * @param tests - Array of tests to execute
  * @param options - Execution options
  * @returns Array of exit codes
- * 
+ *
  * @example
  * ```typescript
  * const tests = [
  *     { file: '/path/to/Test1.ctl' },
  *     { file: '/path/to/Test2.ctl', testId: 'specificTest' }
  * ];
- * 
+ *
  * const results = await executeMultipleTests(tests, {
  *     projectPath: '/path/to/project'
  * });
- * 
+ *
  * results.forEach((code, i) => {
  *     console.log(`Test ${i}: ${code === 0 ? 'PASSED' : 'FAILED'}`);
  * });
@@ -199,23 +192,23 @@ export async function executeMultipleTests(
 
 /**
  * Execute all tests from discovered test files
- * 
+ *
  * @param testFiles - Array of discovered test files
  * @param options - Execution options
  * @param filter - Optional filter to select specific tests
  * @returns Array of test execution results
- * 
+ *
  * @example
  * ```typescript
  * const testFiles = await discoverTests({ rootPath: '/path/to/project' });
- * 
+ *
  * // Run all tests
  * const results = await executeTestFiles(testFiles, {
  *     projectPath: '/path/to/project'
  * });
- * 
+ *
  * // Run only tests matching filter
- * const filteredResults = await executeTestFiles(testFiles, 
+ * const filteredResults = await executeTestFiles(testFiles,
  *     { projectPath: '/path/to/project' },
  *     { pattern: /^test.*$/i }
  * );
@@ -241,8 +234,8 @@ export async function executeTestFiles(
 
         // If individual test execution is supported and filter specifies test ID
         if (testFile.supportsIndividualTests && filter?.testId) {
-            const testCase = testFile.testCases.find(tc => tc.id === filter.testId);
-            
+            const testCase = testFile.testCases.find((tc) => tc.id === filter.testId);
+
             if (testCase) {
                 const exitCode = await executeTest(testFile.path, options, testCase.id);
                 results.push({
@@ -254,10 +247,11 @@ export async function executeTestFiles(
         } else if (testFile.supportsIndividualTests && filter?.pattern) {
             // Execute matching tests individually
             for (const testCase of testFile.testCases) {
-                const pattern = typeof filter.pattern === 'string' 
-                    ? new RegExp(filter.pattern) 
-                    : filter.pattern;
-                
+                const pattern =
+                    typeof filter.pattern === 'string'
+                        ? new RegExp(filter.pattern)
+                        : filter.pattern;
+
                 if (pattern.test(testCase.id)) {
                     const exitCode = await executeTest(testFile.path, options, testCase.id);
                     results.push({

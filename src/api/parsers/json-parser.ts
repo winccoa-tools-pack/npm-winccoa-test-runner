@@ -5,7 +5,6 @@
  */
 
 import * as fs from 'fs/promises';
-import * as path from 'path';
 import { TestResult, TestLocation, TestRunResult, TestSummary } from '../../types/index.js';
 
 /**
@@ -57,18 +56,18 @@ interface TestCaseEntry {
 
 /**
  * Parse JSON test results from fullResult.json
- * 
+ *
  * @param jsonPath - Path to fullResult.json file
  * @returns Parsed test results
- * 
+ *
  * @example
  * ```typescript
  * const result = await parseJsonResults('/path/to/project/fullResult.json');
- * 
+ *
  * console.log(`Total: ${result.summary.total}`);
  * console.log(`Passed: ${result.summary.passed}`);
  * console.log(`Failed: ${result.summary.failed}`);
- * 
+ *
  * result.results.forEach(test => {
  *     console.log(`${test.testId}: ${test.status}`);
  *     if (test.message) {
@@ -87,7 +86,9 @@ export async function parseJsonResults(jsonPath: string): Promise<TestRunResult>
             throw new Error('Invalid result file format (missing TestCases array)');
         }
 
-        console.log(`[JsonParser] Parsing ${testResult.TestCases.length} test entries from ${jsonPath}`);
+        console.log(
+            `[JsonParser] Parsing ${testResult.TestCases.length} test entries from ${jsonPath}`,
+        );
 
         // Group test cases by TcId (multiple entries per test = multiple assertions)
         const groupedByCaseId = groupByTestCaseId(testResult.TestCases);
@@ -113,8 +114,10 @@ export async function parseJsonResults(jsonPath: string): Promise<TestRunResult>
 
         console.log(
             `[JsonParser] Parsed ${results.length} test case(s): ` +
-            `${summary.passed} passed, ${summary.failed} failed, ${summary.aborted} aborted` +
-            (testResult.Statistic.KnownBugs ? `, ${testResult.Statistic.KnownBugs} known bugs` : '')
+                `${summary.passed} passed, ${summary.failed} failed, ${summary.aborted} aborted` +
+                (testResult.Statistic.KnownBugs
+                    ? `, ${testResult.Statistic.KnownBugs} known bugs`
+                    : ''),
         );
 
         return {
@@ -134,26 +137,27 @@ export async function parseJsonResults(jsonPath: string): Promise<TestRunResult>
 
 /**
  * Parse JSON content directly (for testing or when content is already loaded)
- * 
+ *
  * @param content - Parsed JSON object or JSON string
  * @returns Parsed test results
  */
-export async function parseJsonContent(content: string | WinCCOATestResult): Promise<TestRunResult> {
-    const testResult: WinCCOATestResult = typeof content === 'string' 
-        ? JSON.parse(content)
-        : content;
+export async function parseJsonContent(
+    content: string | WinCCOATestResult,
+): Promise<TestRunResult> {
+    const testResult: WinCCOATestResult =
+        typeof content === 'string' ? JSON.parse(content) : content;
 
     // Reuse parseJsonResults logic by creating temp file
     // Alternative: refactor parseJsonResults to accept object
     // For now, just parse inline:
-    
+
     if (!testResult || !Array.isArray(testResult.TestCases)) {
         throw new Error('Invalid result format (missing TestCases array)');
     }
 
     const groupedByCaseId = groupByTestCaseId(testResult.TestCases);
     const results: TestResult[] = [];
-    
+
     for (const [testId, entries] of groupedByCaseId.entries()) {
         const parsedCase = parseTestCase(testId, entries);
         results.push(parsedCase);
@@ -245,10 +249,7 @@ function parseTestCase(testId: string, entries: TestCaseEntry[]): TestResult {
     }
 
     // Build overall message
-    const message =
-        messages.length > 0
-            ? messages.join('\n')
-            : `All assertions passed`;
+    const message = messages.length > 0 ? messages.join('\n') : `All assertions passed`;
 
     return {
         testId,
@@ -257,8 +258,8 @@ function parseTestCase(testId: string, entries: TestCaseEntry[]): TestResult {
         duration: totalDuration,
         stackTrace: stackTraces.length > 0 ? stackTraces.join('\n') : undefined,
         location,
-        method: entries.find(e => e.Method)?.Method,
-        note: entries.find(e => e.Note)?.Note,
+        method: entries.find((e) => e.Method)?.Method,
+        note: entries.find((e) => e.Note)?.Note,
     };
 }
 

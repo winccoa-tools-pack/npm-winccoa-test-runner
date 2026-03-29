@@ -6,8 +6,13 @@
 
 import { Command } from 'commander';
 import * as path from 'path';
-import { discoverTests, executeTest, executeTestFiles, parseTestResults, findResultFiles } from './index.js';
-import { TestFile } from './types/index.js';
+import {
+    discoverTests,
+    executeTest,
+    executeTestFiles,
+    parseTestResults,
+    findResultFiles,
+} from './index.js';
 import {
     formatDiscoveredTests,
     formatDiscoveredTestsVerbose,
@@ -113,8 +118,8 @@ program
 
             // Run specific file
             if (options.file) {
-                const filePath = path.isAbsolute(options.file) 
-                    ? options.file 
+                const filePath = path.isAbsolute(options.file)
+                    ? options.file
                     : path.join(projectPath, options.file);
 
                 console.log(formatTestExecutionStart(filePath, options.test, projectPath));
@@ -140,8 +145,8 @@ program
 
                 // Show results
                 console.log(formatMultipleTestResults(results, projectPath));
-                
-                exitCode = results.some(r => r.exitCode !== 0) ? 1 : 0;
+
+                exitCode = results.some((r) => r.exitCode !== 0) ? 1 : 0;
             } else {
                 console.error('❌ No test specified. Use --file, --test, or --all');
                 process.exit(1);
@@ -150,9 +155,9 @@ program
             // Parse results if available
             if (exitCode === 0) {
                 console.log(`\n📋 Parsing test results...`);
-                
+
                 const resultFiles = await findResultFiles(projectPath);
-                
+
                 if (resultFiles.fullResult) {
                     const result = await parseTestResults({
                         resultPath: resultFiles.fullResult,
@@ -160,12 +165,20 @@ program
                     });
 
                     if (options.outputFormat === 'json') {
-                        console.log(formatTestReportJson(result.summary, result.results, result.environment));
+                        console.log(
+                            formatTestReportJson(
+                                result.summary,
+                                result.results,
+                                result.environment,
+                            ),
+                        );
                     } else if (options.outputFormat === 'junit') {
                         console.log(formatTestReportJUnit(result.summary, result.results));
                     } else {
                         // Console format
-                        console.log(formatTestReport(result.summary, result.results, result.environment));
+                        console.log(
+                            formatTestReport(result.summary, result.results, result.environment),
+                        );
                     }
                 } else {
                     console.log('   No result files found (fullResult.json)');
@@ -196,12 +209,12 @@ program
 
             // Determine result file path
             let resultPath = options.resultFile;
-            
+
             if (!resultPath) {
                 // Try to find fullResult.json in project
                 const resultFiles = await findResultFiles(projectPath);
                 resultPath = resultFiles.fullResult;
-                
+
                 if (!resultPath) {
                     console.error('❌ No result file found. Specify with --result-file');
                     process.exit(1);
@@ -224,7 +237,9 @@ program
 
             // Output results
             if (options.output === 'json') {
-                console.log(formatTestReportJson(result.summary, result.results, result.environment));
+                console.log(
+                    formatTestReportJson(result.summary, result.results, result.environment),
+                );
             } else if (options.output === 'junit') {
                 console.log(formatTestReportJUnit(result.summary, result.results));
             } else {

@@ -37,7 +37,7 @@ export function formatTestReportJson(
         hostname?: string;
         version?: string;
         testVersion?: string;
-    }
+    },
 ): string {
     const report = {
         summary,
@@ -45,6 +45,6 @@ export function formatTestReportJson(
         environment,
         timestamp: new Date().toISOString(),
     };
-    
+
     return JSON.stringify(report, null, 2);
 }

@@ -1,6 +1,6 @@
 /**
  * Core type definitions for WinCC OA test runner
- * 
+ *
  * These types are platform-agnostic and can be used by both CLI and VS Code Extension.
  */
 
@@ -50,7 +50,7 @@ export interface TestFile {
     /**
      * Test format version detected
      * - '3.19': Uses getAllTestCaseIds() method
-     * - '3.20': Uses public int test*() methods  
+     * - '3.20': Uses public int test*() methods
      * - 'mixed': Both formats found (invalid)
      */
     format?: '3.19' | '3.20' | 'mixed';
