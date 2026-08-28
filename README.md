@@ -1,133 +1,414 @@
----
-Minimal starter template for creating shared WinCC OA NPM libraries
-THIS IS AN EXAMPLE README
----
+# WinCC OA Test Runner ![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)
 
+A headless test execution API and CLI for the SIMATIC WinCC Open Architecture OaTest framework. Designed for CI/CD pipelines, automated testing, and AI-driven test orchestration.
 
-# WinCC OA UI PNL/XML Converter
-
-A lightweight developer tool for SIMATIC WinCC Open Architecture projects, providing reliable PNL ⇄ XML transformations for UI panels.
-This package is part of the modular winccoa-tools-pack ecosystem, which delivers modern development tooling,
-reusable libraries, and VS Code extensions for WinCC OA engineers.
-[github.com](https://github.com/winccoa-tools-pack)
+Part of the [winccoa-tools-pack](https://github.com/winccoa-tools-pack) ecosystem - modern development tooling for WinCC OA.
 
 ## ✨ Features
 
-- **PNL → XML conversion**  
-  Transform classic .pnl UI panel files into structured XML suitable for analysis, automation, and editor tooling.
+- **🔍 Test Discovery**: Automatically find and parse OaTest files in your project
+  - Supports both 3.19 (`getAllTestCaseIds()`) and 3.20 (`public int test*()`) formats
+  - Detects individual test execution capability
+  - Maps test cases with metadata
 
-- **XML → PNL conversion**  
-  Regenerate WinCC OA .pnl files from XML to enable round-trip workflows and external processing.
+- **🚀 Test Execution**: Run tests programmatically or via CLI
+  - Single test file execution
+  - Individual test case execution (when supported)
+  - Bulk test execution with filters
+  - Serialized queue prevents WinCC OA JSON conflicts
 
-- **Tooling-friendly design**  
-  Built to integrate with next-generation WinCC OA development tools such as VS Code extensions,
-  reusable workflows, and advanced analysis pipelines,
-  consistent with the overall goals of the winccoa-tools-pack organization.
+- **📊 Result Parsing**: Parse fullResult.json output from WinCC OA
+  - Structured test results with status, duration, messages
+  - Location information for failed tests
+  - Environment metadata (hostname, version, test framework version)
 
-- **Modern project template**  
-  Generated from the shared npm-winccoa-template to ensure consistent structure, CI/CD, TypeScript setup, linting, and maintainability across the ecosystem.
+- **🎨 Multiple Output Formats**:
+  - **Console**: Colorful terminal output with emojis (powered by chalk)
+  - **JSON**: Structured data for programmatic processing
+  - **JUnit XML**: CI/CD integration (Jenkins, Azure DevOps, GitHub Actions)
+
+- **📚 Library + CLI**: Use as API in your code or as standalone CLI tool
+  - Headless execution for CI/CD
+  - Perfect for AI-driven test automation
+  - Can be integrated into VS Code extensions
 
 ## 📦 Installation
 
 ```shell
-npm install @winccoa-tools-pack/npm-winccoa-ui-pnl-xml
+npm install @winccoa-tools-pack/test-runner
 ```
 
-Or globally:
+Or globally for CLI usage:
 
 ```shell
-npm install -g @winccoa-tools-pack/npm-winccoa-ui-pnl-xml
+npm install -g @winccoa-tools-pack/test-runner
 ```
 
-## 🖥 Usage (CLI)
+## 🖥 CLI Usage
+
+### Discover Tests
+
+Find all test files in your WinCC OA project:
 
 ```shell
-# Convert .pnl → .xml (in-place)
-winccoa-pnl-xml convert pnl-to-xml about.pnl --version 3.20
+# Discover tests in current directory
+winccoa-test discover
 
-# Convert .xml → .pnl (in-place)
-winccoa-pnl-xml convert xml-to-pnl about.xml --version 3.20
+# Discover in specific project
+winccoa-test discover --project /path/to/project
 
-# Optional flags
-#   --config <path>   Use a specific project config file
-#   --overwrite       Overwrite existing output files
-#   --timeout <ms>    Increase process timeout
+# Output as JSON
+winccoa-test discover --output json
+
+# Verbose output (list all test cases)
+winccoa-test discover --verbose
 ```
 
-## ⚠️ Important behavior
+### Run Tests
 
-- Conversion is performed by WinCC OA `WCCOAui` and is **in-place** (the input file is rewritten).
-- WinCC OA may create a `.bak` file next to the input.
-- The input passed to `-p` is typically resolved relative to the project’s `panels/` directory.
-  Use `--config` if you need to point the converter at a specific project context.
+Execute tests headlessly:
 
-## 🧩 Usage (API)
+```shell
+# Run a specific test file
+winccoa-test run --file scripts/MyTest.ctl --project /path/to/project
+
+# Run a single test case
+winccoa-test run --file scripts/MyTest.ctl --test testAddition
+
+# Run all tests in project
+winccoa-test run --all --project /path/to/project
+
+# Specify WinCC OA installation and version
+winccoa-test run --file scripts/MyTest.ctl \
+  --install-path /opt/WinCC_OA \
+  --oa-version 3.20
+
+# Get results in JSON format
+winccoa-test run --all --output-format json
+
+# Get results in JUnit XML (for CI/CD)
+winccoa-test run --all --output-format junit > test-results.xml
+```
+
+### Parse Results
+
+Parse existing test results:
+
+```shell
+# Parse fullResult.json from project
+winccoa-test parse --project /path/to/project
+
+# Parse specific result file
+winccoa-test parse --result-file /path/to/fullResult.json
+
+# Output as JUnit XML (for CI/CD)
+winccoa-test parse --output junit > test-results.xml
+```
+
+## 🧩 API Usage
+
+Use the test runner programmatically in your Node.js/TypeScript projects:
+
+### Discovery API
 
 ```typescript
-import { pnlToXml, xmlToPnl } from "@winccoa-tools-pack/npm-winccoa-ui-pnl-xml";
+import { discoverTests, parseSingleTestFile } from '@winccoa-tools-pack/test-runner';
 
-// Note: WinCC OA performs the conversion in-place and may create a .bak backup.
-// The input path is typically resolved relative to the project’s panels/ directory.
-
-const pnlToXmlResult = await pnlToXml({
-  version: "3.20",
-  inputPath: "about.pnl",
-  // configPath: "C:/path/to/project/config/config",
-  // overwrite: true,
-  // timeout: 120_000,
+// Discover all tests in a project
+const tests = await discoverTests({
+    rootPath: '/path/to/project',
+    subdirectory: 'scripts',
 });
 
-if (!pnlToXmlResult.success) {
-  throw new Error(`Conversion failed (exit ${pnlToXmlResult.exitCode}): ${pnlToXmlResult.stderr}`);
+console.log(`Found ${tests.length} test files`);
+
+for (const test of tests) {
+    console.log(`- ${test.className}: ${test.testCases.length} tests`);
+    console.log(`  Format: ${test.format}`);
+    console.log(`  Individual execution: ${test.supportsIndividualTests}`);
 }
 
-const xmlToPnlResult = await xmlToPnl({
-  version: "3.20",
-  inputPath: "about.xml",
-});
-
-console.log({ pnlToXmlResult, xmlToPnlResult });
+// Parse a single test file
+const testFile = await parseSingleTestFile('/path/to/MyTest.ctl');
+if (testFile) {
+    console.log(`Class: ${testFile.className}`);
+    console.log(`Tests: ${testFile.testCases.map(tc => tc.id).join(', ')}`);
+}
 ```
 
-More details: see [docs/USAGE.md](docs/USAGE.md).
+### Execution API
+
+```typescript
+import { executeTest, executeTestFiles } from '@winccoa-tools-pack/test-runner';
+
+// Execute a single test
+const exitCode = await executeTest(
+    '/path/to/MyTest.ctl',
+    {
+        projectPath: '/path/to/project',
+        installPath: '/opt/WinCC_OA',
+        version: '3.20',
+        timeout: 60000,
+    },
+    'testAddition' // Optional: specific test case ID
+);
+
+console.log(`Test exited with code: ${exitCode}`);
+
+// Execute multiple tests
+const results = await executeTestFiles(
+    tests, // From discovery
+    {
+        projectPath: '/path/to/project',
+        timeout: 120000,
+    }
+);
+
+for (const result of results) {
+    console.log(`${result.file}: ${result.exitCode === 0 ? 'PASS' : 'FAIL'}`);
+}
+```
+
+### Parsing API
+
+```typescript
+import { parseTestResults, findResultFiles } from '@winccoa-tools-pack/test-runner';
+
+// Find result files in project
+const resultFiles = await findResultFiles('/path/to/project');
+console.log(`fullResult.json: ${resultFiles.fullResult}`);
+
+// Parse test results
+const result = await parseTestResults({
+    resultPath: resultFiles.fullResult,
+    projectPath: '/path/to/project',
+});
+
+console.log(`Total: ${result.summary.total}`);
+console.log(`Passed: ${result.summary.passed}`);
+console.log(`Failed: ${result.summary.failed}`);
+
+for (const test of result.results) {
+    if (test.status !== 'passed') {
+        console.log(`FAILED: ${test.testId}`);
+        console.log(`  ${test.message}`);
+        if (test.location) {
+            console.log(`  at ${test.location.file}:${test.location.line}`);
+        }
+    }
+}
+```
+
+### Formatters
+
+```typescript
+import { 
+    formatDiscoveredTests, 
+    formatTestReportJUnit 
+} from '@winccoa-tools-pack/test-runner';
+
+// Console output
+const consoleOutput = formatDiscoveredTests(tests, '/path/to/project');
+console.log(consoleOutput);
+
+// JUnit XML for CI/CD
+const junitXml = formatTestReportJUnit(
+    result.summary,
+    result.results,
+    'My Test Suite'
+);
+fs.writeFileSync('test-results.xml', junitXml);
+```
+
+## 🤖 AI Integration
+
+This tool is designed for AI-driven test automation:
+
+```typescript
+// Example: AI agent discovers and runs tests
+async function aiTestRunner(projectPath: string) {
+    // 1. Discover tests
+    const tests = await discoverTests({ rootPath: projectPath });
+    
+    // 2. Run all tests
+    const results = await executeTestFiles(tests, { projectPath });
+    
+    // 3. Parse results
+    const resultFiles = await findResultFiles(projectPath);
+    const parsed = await parseTestResults({
+        resultPath: resultFiles.fullResult,
+        projectPath,
+    });
+    
+    // 4. Report to AI
+    return {
+        discovered: tests.length,
+        executed: results.length,
+        passed: parsed.summary.passed,
+        failed: parsed.summary.failed,
+        failures: parsed.results
+            .filter(r => r.status === 'failed')
+            .map(r => ({
+                test: r.testId,
+                message: r.message,
+                location: r.location,
+            })),
+    };
+}
+```
+
+## 🏗️ CI/CD Integration
+
+### GitHub Actions Example
+
+```yaml
+name: Run Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm install -g @winccoa-tools-pack/test-runner
+      
+      - name: Run tests
+        run: |
+          winccoa-test run --all \
+            --project ./my-project \
+            --output-format junit > test-results.xml
+      
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: test-results.xml
+```
+
+### Jenkins Pipeline Example
+
+```groovy
+pipeline {
+    agent any
+    stages {
+        stage('Test') {
+            steps {
+                sh '''
+                    npm install -g @winccoa-tools-pack/test-runner
+                    winccoa-test run --all \
+                        --project ./my-project \
+                        --output-format junit > test-results.xml
+                '''
+            }
+        }
+    }
+    post {
+        always {
+            junit 'test-results.xml'
+        }
+    }
+}
+```
+
+## 📋 Test Formats Supported
+
+### WinCC OA 3.19 Format
+
+```cpp
+class MyTest : OaTest
+{
+    public:
+        // Define test cases
+        public dyn_string getAllTestCaseIds()
+        {
+            return makeDynString("testCase1", "testCase2");
+        }
+
+        // Test implementations
+        public void testCase1()
+        {
+            // Test code
+        }
+
+        public void testCase2()
+        {
+            // Test code
+        }
+};
+
+main()
+{
+    testlib.runTestClass("MyTest");
+}
+```
+
+### WinCC OA 3.20 Format
+
+```cpp
+class MyTest : OaTest
+{
+    public:
+        // Test method pattern: public int test*()
+        public int testAddition()
+        {
+            int result = 1 + 1;
+            assertEqualsInt(2, result);
+            return 0;
+        }
+
+        public int testSubtraction()
+        {
+            int result = 5 - 3;
+            assertEqualsInt(2, result);
+            return 0;
+        }
+};
+
+// Varargs signature enables individual test execution
+main(...)
+{
+    testlib.runTestClass("MyTest");
+}
+```
 
 ## 🩺 Troubleshooting
 
-- Non-zero exit code: inspect `stderr` and ensure `--version` matches your WinCC OA installation.
-- Timeouts on large panels: increase `--timeout` / `timeout`.
-- File not found: remember `inputPath` is usually relative to `panels/` in the active project context.
+### Tests not discovered
+
+- Ensure your test files are in the `scripts/` directory (or specify with `--subdirectory`)
+- Check that test classes inherit from `OaTest`
+- Verify test patterns: `getAllTestCaseIds()` (3.19) or `public int test*()` (3.20)
+
+### Individual tests not executable
+
+- Ensure `main(...)` signature with varargs (3 dots)
+- Only 3.20 format with `main(...)` supports individual test execution
+
+### Test execution fails
+
+- Verify `--project` path points to valid WinCC OA project
+- Check `--install-path` if WinCC OA is not in PATH
+- Increase `--timeout` for long-running tests
+
+### Result parsing fails
+
+- Ensure WinCC OA test framework generated `fullResult.json`
+- Check file permissions and paths
+- Verify test execution completed successfully
 
 ## 📚 Ecosystem Integration
 
-This package is designed for seamless use with:
+This package works seamlessly with:
 
-- **VS Code extensions for WinCC OA development**  
-  Our open source community provides multiple VS Code tools that enhance the engineering workflow
-  for WinCC OA developers. This converter acts as a foundation for UI-related features such as the Panel Explorer.
-
-- **Node.js libraries**  
-  Works side-by-side with other libraries in the winccoa-tools-pack suite (project management, core utilities, testing, etc.).
-
-- **CI/CD automation**  
-  Ideal for pipelines needing validation or transformation of UI panel resources.
-
-- **Automation tokens** are recommended for CI/CD (they don't expire but can be revoked)
-- The token needs **publish** permission for your package scope
-- For scoped packages (`@winccoa-tools-pack/...`), ensure your NPM organization allows publishing
-
-### Testing Without NPM_TOKEN
-
-If `NPM_TOKEN` is not configured, the workflow will:
-
-- ✅ Still run tests and build the package
-- ✅ Create GitHub releases with artifacts
-- ⚠️ Skip NPM publishing with a warning message
-
-You can always publish manually later:
-
-```bash
-npm publish --access public
-```
+- **vscode-winccoa-tests**: VS Code extension that uses this library for test discovery and execution
+- **npm-winccoa-core**: Core utilities for WinCC OA component interaction
+- Other winccoa-tools-pack projects
 
 ## 📦 Development
 
@@ -141,6 +422,12 @@ npm run build
 # Run tests
 npm test
 
+# Run only unit tests
+npm run test:unit
+
+# Run only integration tests
+npm run test:integration
+
 # Lint code
 npm run lint
 ```
@@ -151,16 +438,14 @@ Special thanks to all our [contributors](https://github.com/orgs/winccoa-tools-p
 
 ### Key Contributors
 
-- **Martin Pokorny** ([@mPokornyETM](https://github.com/mPokornyETM)) - Creator & Lead Developer
-- And many more amazing contributors!
+- **Richard Janisch** ([@RichardJanisch](https://github.com/RichardJanisch)) - Creator & Lead Developer
+- **Martin Pokorny** ([@mPokornyETM](https://github.com/mPokornyETM)) - Core Infrastructure & Ecosystem Architect
 
 ---
 
 ## 📜 License
 
-This project is basically licensed under the **MIT License** - see the [LICENSE](https://github.com/winccoa-tools-pack/.github/blob/main/LICENSE) file for details.
-
-It might happen that partial repositories contain third party SW which uses other license models.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 ---
 
@@ -174,14 +459,10 @@ This is a community-driven open source project created to enhance the developmen
 
 ## 🎉 Thank You
 
-Thank you for using WinCC OA tools package! We're excited to be part of your development journey.
+Thank you for using WinCC OA Test Runner! We're excited to be part of your development and testing journey.
 
-Happy Coding! 🚀
+Happy Testing! 🚀
 
 ---
-
-## Quick Links
-
-[📦 VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=mPokornyETM.wincc-oa-projects)
 
 Made with ❤️ for and by the WinCC OA community
