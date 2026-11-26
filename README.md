@@ -6,6 +6,8 @@ THIS IS AN EXAMPLE README
 
 # WinCC OA UI PNL/XML Converter
 
+> **Not published to npm yet.** This package is still under development and has no release. Its API and contents may change before the first release. This notice is removed with the first release.
+
 A lightweight developer tool for SIMATIC WinCC Open Architecture projects, providing reliable PNL ⇄ XML transformations for UI panels.
 This package is part of the modular winccoa-tools-pack ecosystem, which delivers modern development tooling,
 reusable libraries, and VS Code extensions for WinCC OA engineers.
@@ -158,9 +160,9 @@ Special thanks to all our [contributors](https://github.com/orgs/winccoa-tools-p
 
 ## 📜 License
 
-This project is basically licensed under the **MIT License** - see the [LICENSE](https://github.com/winccoa-tools-pack/.github/blob/main/LICENSE) file for details.
+This project is licensed under the **MIT License** - see the [LICENSE](https://github.com/winccoa-tools-pack/.github/blob/main/LICENSE) file for details.
 
-It might happen that partial repositories contain third party SW which uses other license models.
+Some parts of this repository may contain third-party software that uses other license models.
 
 ---
 

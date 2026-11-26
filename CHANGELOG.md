@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-11-26
+
+### Fixed
+
+- resolve katex and js-yaml security alerts in dev dependencies (#73)
+
+### Changed
+
+- fix spelling errors, broken links, and template artifacts (#20)
+- deps-dev(deps-dev): bump @types/node from 25.3.3 to 26.6.6 (#64)
+- bump @winccoa-tools-pack/npm-winccoa-core (#33)
+- replace the old Pre-Release (Develop) workflow with the Pre-Release (Alpha) variant (#69)
+- note that the package is not published to npm yet (#72)
+
 ## [0.2.0] - 2026-03-03
 
 ### Changed
