@@ -1,6 +1,6 @@
 {
   "name": "@winccoa-tools-pack/npm-winccoa-test-runner",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "WinCC OA Test Runner – execute and manage WinCC OA test suites",
   "author": "winccoa-tools-pack",
   "license": "MIT",
