@@ -25,7 +25,7 @@
     }
   },
   "bin": {
-    "winccoa-pnl-xml": "./dist/cjs/cli.js"
+    "winccoa-test-runner": "./dist/cjs/cli.js"
   },
   "files": [
     "dist"
