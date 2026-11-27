@@ -5,5 +5,6 @@
 
 // export * from './winccoa-components';
 
+export * from './logger.js';
 export * from './result-files.js';
 export * from './test-parser.js';

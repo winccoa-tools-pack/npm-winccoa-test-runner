@@ -57,8 +57,8 @@ winccoa-test discover
 # Discover in specific project
 winccoa-test discover --project /path/to/project
 
-# Output as JSON
-winccoa-test discover --output json
+# Write the list as JSON to a file (default: discovered-tests.json)
+winccoa-test discover --output json --output-file discovered-tests.json
 
 # Verbose output (list all test cases)
 winccoa-test discover --verbose
@@ -83,12 +83,17 @@ winccoa-test run --file scripts/MyTest.ctl \
   --install-path /opt/WinCC_OA \
   --oa-version 3.20
 
-# Get results in JSON format
-winccoa-test run --all --output-format json
+# Write results as JSON to a file (default: test-results.json)
+winccoa-test run --all --output-format json --output-file test-results.json
 
-# Get results in JUnit XML (for CI/CD)
-winccoa-test run --all --output-format junit > test-results.xml
+# Write results as JUnit XML for CI/CD (default: test-results.xml)
+winccoa-test run --all --output-format junit --output-file test-results.xml
 ```
+
+> **Machine-readable reports are written to a file.** The formats `json` and `junit` are never printed
+> to stdout or stderr, because other output (for example from WinCC OA tools) could corrupt them.
+> Use `--output-file <path>` to choose the file. Diagnostics are only printed to stderr with `--verbose`;
+> the library itself is silent unless a logger is registered with `setLogger()`.
 
 ### Parse Results
 
@@ -101,8 +106,8 @@ winccoa-test parse --project /path/to/project
 # Parse specific result file
 winccoa-test parse --result-file /path/to/fullResult.json
 
-# Output as JUnit XML (for CI/CD)
-winccoa-test parse --output junit > test-results.xml
+# Write JUnit XML for CI/CD to a file (default: test-results.xml)
+winccoa-test parse --output junit --output-file test-results.xml
 ```
 
 ## 🧩 API Usage
@@ -282,7 +287,7 @@ jobs:
         run: |
           winccoa-test run --all \
             --project ./my-project \
-            --output-format junit > test-results.xml
+            --output-format junit --output-file test-results.xml
       
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
@@ -303,7 +308,7 @@ pipeline {
                     npm install -g @winccoa-tools-pack/npm-winccoa-test-runner
                     winccoa-test run --all \
                         --project ./my-project \
-                        --output-format junit > test-results.xml
+                        --output-format junit --output-file test-results.xml
                 '''
             }
         }

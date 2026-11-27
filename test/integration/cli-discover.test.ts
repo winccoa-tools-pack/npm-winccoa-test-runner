@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 test('CLI: "discover" command finds test files', () => {
@@ -28,7 +29,9 @@ test('CLI: "discover" command finds test files', () => {
     assert.match(result.stdout ?? '', /LegacyTest/);
 });
 
-test('CLI: "discover --output json" outputs valid JSON', () => {
+test('CLI: "discover --output json" writes valid JSON to the output file', () => {
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'winccoa-test-runner-'));
+    const outFile = path.join(outDir, 'discovered.json');
     const repoRoot = path.resolve(__dirname, '..', '..');
     const testProject = path.join(repoRoot, 'test', 'fixtures', 'projects', 'runnable');
 
@@ -38,8 +41,8 @@ test('CLI: "discover --output json" outputs valid JSON', () => {
     const cliPath = fs.existsSync(distCli) ? distCli : srcCli;
     const nodeArgs =
         cliPath === srcCli
-            ? ['--import', 'tsx', cliPath, 'discover', '--project', testProject, '--output', 'json']
-            : [cliPath, 'discover', '--project', testProject, '--output', 'json'];
+            ? ['--import', 'tsx', cliPath, 'discover', '--project', testProject, '--output', 'json', '--output-file', outFile]
+            : [cliPath, 'discover', '--project', testProject, '--output', 'json', '--output-file', outFile];
 
     const result = spawnSync(process.execPath, nodeArgs, {
         cwd: repoRoot,
@@ -49,7 +52,8 @@ test('CLI: "discover --output json" outputs valid JSON', () => {
     assert.equal(result.status, 0);
     
     // Parse JSON output
-    const tests = JSON.parse(result.stdout ?? '');
+    const tests = JSON.parse(fs.readFileSync(outFile, 'utf8'));
+    fs.rmSync(outDir, { recursive: true, force: true });
     
     assert.equal(tests.length, 2);
     assert.ok(tests.some((t: any) => t.className === 'SampleTest'));

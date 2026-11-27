@@ -5,6 +5,7 @@
  */
 
 import { Command } from 'commander';
+import * as fs from 'fs/promises';
 import * as path from 'path';
 import {
     discoverTests,
@@ -12,6 +13,7 @@ import {
     executeTestFiles,
     parseTestResults,
     findResultFiles,
+    setLogger,
 } from './index.js';
 import {
     formatDiscoveredTests,
@@ -39,6 +41,28 @@ program
     .option('--oa-version <version>', 'WinCC OA version (e.g., 3.20)')
     .option('--verbose', 'Enable verbose output');
 
+// Diagnostics of the library go to stderr, and only with --verbose
+program.hook('preAction', () => {
+    if (program.opts().verbose) {
+        setLogger((message) => console.error(`[test-runner] ${message}`));
+    }
+});
+
+/**
+ * Write a machine-readable report (json, junit) to a file.
+ * It is never printed to stdout or stderr: other output (for example of WinCC OA
+ * tools) could end up in the same stream and corrupt the report.
+ */
+async function writeReport(
+    content: string,
+    outputFile: string | undefined,
+    defaultName: string,
+): Promise<void> {
+    const target = path.resolve(outputFile ?? defaultName);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.writeFile(target, content, 'utf-8');
+    console.log(`Report written to ${target}`);
+}
 /**
  * Command: discover
  * Discover all tests in a project
@@ -48,14 +72,15 @@ program
     .description('Discover test files in a WinCC OA project')
     .option('-s, --subdirectory <path>', 'Subdirectory to search (default: scripts)', 'scripts')
     .option('-o, --output <format>', 'Output format: console, json', 'console')
+    .option('--output-file <path>', 'File for the json output (default: discovered-tests.json)')
     .action(async (options) => {
         try {
             const projectPath = program.opts().project || process.cwd();
             const verbose = program.opts().verbose;
 
             if (verbose) {
-                console.log(`[Discovery] Project: ${projectPath}`);
-                console.log(`[Discovery] Subdirectory: ${options.subdirectory}`);
+                console.error(`[Discovery] Project: ${projectPath}`);
+                console.error(`[Discovery] Subdirectory: ${options.subdirectory}`);
             }
 
             // Discover tests
@@ -66,7 +91,11 @@ program
 
             // Output results
             if (options.output === 'json') {
-                console.log(formatDiscoveredTestsJson(tests));
+                await writeReport(
+                    formatDiscoveredTestsJson(tests),
+                    options.outputFile,
+                    'discovered-tests.json',
+                );
             } else {
                 // Console format
                 if (verbose) {
@@ -94,6 +123,10 @@ program
     .option('-t, --test <id>', 'Specific test case ID to run')
     .option('-a, --all', 'Run all tests in project')
     .option('-o, --output-format <format>', 'Output format: console, json, junit', 'console')
+    .option(
+        '--output-file <path>',
+        'File for the json or junit output (default: test-results.json or test-results.xml)',
+    )
     .option('--timeout <ms>', 'Test timeout in milliseconds', '60000')
     .action(async (options) => {
         try {
@@ -102,8 +135,8 @@ program
             const timeout = parseInt(options.timeout, 10);
 
             if (verbose) {
-                console.log(`[Execution] Project: ${projectPath}`);
-                console.log(`[Execution] Timeout: ${timeout}ms`);
+                console.error(`[Execution] Project: ${projectPath}`);
+                console.error(`[Execution] Timeout: ${timeout}ms`);
             }
 
             // Execution options
@@ -164,11 +197,17 @@ program
                 });
 
                 if (options.outputFormat === 'json') {
-                    console.log(
+                    await writeReport(
                         formatTestReportJson(result.summary, result.results, result.environment),
+                        options.outputFile,
+                        'test-results.json',
                     );
                 } else if (options.outputFormat === 'junit') {
-                    console.log(formatTestReportJUnit(result.summary, result.results));
+                    await writeReport(
+                        formatTestReportJUnit(result.summary, result.results),
+                        options.outputFile,
+                        'test-results.xml',
+                    );
                 } else {
                     // Console format
                     console.log(
@@ -200,6 +239,10 @@ program
     .option('-r, --result-file <path>', 'Path to result file')
     .option('-f, --format <format>', 'Result format: auto, json, log', 'auto')
     .option('-o, --output <format>', 'Output format: console, json, junit', 'console')
+    .option(
+        '--output-file <path>',
+        'File for the json or junit output (default: test-results.json or test-results.xml)',
+    )
     .action(async (options) => {
         try {
             const projectPath = program.opts().project || process.cwd();
@@ -222,8 +265,8 @@ program
             }
 
             if (verbose) {
-                console.log(`[Parser] Result file: ${resultPath}`);
-                console.log(`[Parser] Format: ${options.format}`);
+                console.error(`[Parser] Result file: ${resultPath}`);
+                console.error(`[Parser] Format: ${options.format}`);
             }
 
             // Parse results
@@ -235,11 +278,17 @@ program
 
             // Output results
             if (options.output === 'json') {
-                console.log(
+                await writeReport(
                     formatTestReportJson(result.summary, result.results, result.environment),
+                    options.outputFile,
+                    'test-results.json',
                 );
             } else if (options.output === 'junit') {
-                console.log(formatTestReportJUnit(result.summary, result.results));
+                await writeReport(
+                    formatTestReportJUnit(result.summary, result.results),
+                    options.outputFile,
+                    'test-results.xml',
+                );
             } else {
                 // Console format
                 console.log(`\n📊 Test Results from: ${path.basename(resultPath)}`);

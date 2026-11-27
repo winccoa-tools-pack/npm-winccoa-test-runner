@@ -7,6 +7,7 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { TestRunResult, ParseOptions, ParseFormat } from '../../types/index.js';
 import { parseJsonResults } from './json-parser.js';
+import { errorMessage, log } from '../../utils/logger.js';
 
 // Re-export specific parsers
 export { parseJsonResults } from './json-parser.js';
@@ -43,7 +44,7 @@ export async function parseTestResults(options: ParseOptions): Promise<TestRunRe
         detectedFormat = detectFormat(resultPath);
     }
 
-    console.log(`[ResultParser] Parsing ${resultPath} as ${detectedFormat}`);
+    log(`Parsing ${resultPath} as ${detectedFormat}`);
 
     // Parse based on format
     switch (detectedFormat) {
@@ -125,7 +126,7 @@ export async function findResultFiles(projectPath: string): Promise<{
         // TODO: Find log files in log/ directory
         result.logFiles = [];
     } catch (error) {
-        console.error(`[ResultParser] Error finding result files in ${projectPath}:`, error);
+        log(`Error finding result files in ${projectPath}: ${errorMessage(error)}`);
     }
 
     return result;

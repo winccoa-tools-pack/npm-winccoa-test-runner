@@ -5,6 +5,7 @@
 
 import * as fs from 'fs/promises';
 import { TestFile } from '../types/index.js';
+import { errorMessage, log } from './logger.js';
 
 /**
  * Internal representation of a parsed test class
@@ -85,7 +86,7 @@ export async function parseTestFile(filePath: string): Promise<TestFile | null> 
             format,
         };
     } catch (error) {
-        console.error(`Failed to parse test file ${filePath}:`, error);
+        log(`Failed to parse test file ${filePath}: ${errorMessage(error)}`);
         return null;
     }
 }
