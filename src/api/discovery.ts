@@ -7,6 +7,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { TestFile, DiscoveryOptions } from '../types/index.js';
 import { parseTestFile, containsOaTest } from '../utils/test-parser.js';
+import { errorMessage, log } from '../utils/logger.js';
 
 /**
  * Discover all test files in a directory
@@ -38,7 +39,7 @@ export async function discoverTests(options: DiscoveryOptions): Promise<TestFile
     try {
         await fs.access(searchPath);
     } catch {
-        console.warn(`Search path does not exist: ${searchPath}`);
+        log(`Search path does not exist: ${searchPath}`);
         return [];
     }
 
@@ -118,7 +119,7 @@ async function findCtlFiles(dirPath: string): Promise<string[]> {
             }
         }
     } catch (error) {
-        console.error(`Error reading directory ${dirPath}:`, error);
+        log(`Error reading directory ${dirPath}: ${errorMessage(error)}`);
     }
 
     return ctlFiles;

@@ -22,6 +22,10 @@ export { executeTest, executeMultipleTests, executeTestFiles } from './api/execu
 // Export parsing API
 export { parseTestResults, parseJsonResults, findResultFiles } from './api/parsers/index.js';
 
+// Export logger (the library is silent unless a sink is registered)
+export { setLogger } from './utils/logger.js';
+export type { LogSink } from './utils/logger.js';
+
 // Export formatters
 export * from './formatters/index.js';
 

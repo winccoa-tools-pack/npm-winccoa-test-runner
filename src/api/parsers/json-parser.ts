@@ -6,6 +6,7 @@
 
 import * as fs from 'fs/promises';
 import { TestResult, TestLocation, TestRunResult, TestSummary } from '../../types/index.js';
+import { errorMessage, log } from '../../utils/logger.js';
 
 /**
  * JSON result structure from WinCC OA test framework
@@ -86,9 +87,7 @@ export async function parseJsonResults(jsonPath: string): Promise<TestRunResult>
             throw new Error('Invalid result file format (missing TestCases array)');
         }
 
-        console.log(
-            `[JsonParser] Parsing ${testResult.TestCases.length} test entries from ${jsonPath}`,
-        );
+        log(`[JsonParser] Parsing ${testResult.TestCases.length} test entries from ${jsonPath}`);
 
         // Group test cases by TcId (multiple entries per test = multiple assertions)
         const groupedByCaseId = groupByTestCaseId(testResult.TestCases);
@@ -112,7 +111,7 @@ export async function parseJsonResults(jsonPath: string): Promise<TestRunResult>
             endTime: testResult.Time.End ? new Date(testResult.Time.End) : undefined,
         };
 
-        console.log(
+        log(
             `[JsonParser] Parsed ${results.length} test case(s): ` +
                 `${summary.passed} passed, ${summary.failed} failed, ${summary.aborted} aborted` +
                 (testResult.Statistic.KnownBugs
@@ -130,7 +129,7 @@ export async function parseJsonResults(jsonPath: string): Promise<TestRunResult>
             },
         };
     } catch (error) {
-        console.error(`[JsonParser] Failed to parse test results from ${jsonPath}:`, error);
+        log(`Failed to parse test results from ${jsonPath}: ${errorMessage(error)}`);
         throw error;
     }
 }

@@ -5,7 +5,10 @@
 
 import * as path from 'path';
 import { CtrlComponent } from '@winccoa-tools-pack/npm-winccoa-core/types/components/implementations/CtrlComponent';
+import { getProjectByProjectPath } from '@winccoa-tools-pack/npm-winccoa-core/utils/winccoa-project-environment';
 import { TestExecutionOptions, TestExecutionResult, TestFile, TestFilter } from '../types/index.js';
+import { errorMessage, log } from '../utils/logger.js';
+import { runProcess } from '../utils/process.js';
 import { createResultFiles, deleteResultFiles, resultFilesExist } from '../utils/result-files.js';
 
 /**
@@ -90,6 +93,30 @@ export async function executeTest(
 }
 
 /**
+ * Find the registered WinCC OA project for the given path.
+ * An explicit project name wins; without registration the folder name is used.
+ */
+async function resolveProject(
+    options: TestExecutionOptions,
+): Promise<{ name: string; version?: string }> {
+    if (options.projectName) {
+        return { name: options.projectName };
+    }
+
+    try {
+        const project = await getProjectByProjectPath(options.projectPath);
+        if (project) {
+            return { name: project.getId(), version: project.getVersion() };
+        }
+        log(`No registered WinCC OA project found for ${options.projectPath}`);
+    } catch (error) {
+        log(`Project lookup failed: ${errorMessage(error)}`);
+    }
+
+    return { name: path.basename(options.projectPath) };
+}
+
+/**
  * Internal test execution (not queued)
  */
 async function executeTestInternal(
@@ -97,57 +124,59 @@ async function executeTestInternal(
     options: TestExecutionOptions,
     testCaseId?: string,
 ): Promise<number | null> {
+    if (options.signal?.aborted) {
+        return null;
+    }
+
     try {
         // Step 1: Delete old result files if they exist
         if (await resultFilesExist(options.projectPath)) {
-            console.log('[TestRunner] Deleting old result files...');
+            log('Deleting old result files');
             await deleteResultFiles(options.projectPath);
         }
 
         // Step 2: Create empty result files for WinCC OA to write to
-        console.log('[TestRunner] Creating result files...');
+        log('Creating result files');
         await createResultFiles(options.projectPath);
 
-        // Create CtrlComponent instance
-        const ctrl = new CtrlComponent();
+        const project = await resolveProject(options);
 
-        // Set version if provided
-        if (options.version) {
-            ctrl.setVersion(options.version);
+        // Locate the control manager of the requested (or the project's) version
+        const ctrl = new CtrlComponent();
+        const version = options.version || project.version;
+        if (version) {
+            ctrl.setVersion(version);
         }
 
-        // Resolve project name from path if not provided
-        const projectName = options.projectName || path.basename(options.projectPath);
+        const executable = ctrl.getPath();
+        if (!executable) {
+            throw new Error(`WinCC OA control manager ${ctrl.getName()} not found`);
+        }
 
-        // Build arguments
         // Format: scriptPath -proj projectName [-ETM.oaTest.testCases=testId]
-        const args: string[] = [scriptPath, '-proj', projectName];
-
-        // Add individual test case filter if provided
+        const args: string[] = [scriptPath, '-proj', project.name];
         if (testCaseId) {
             args.push(`-ETM.oaTest.testCases=${testCaseId}`);
         }
 
-        console.log(`[TestRunner] Executing: ${ctrl.getName()} ${args.join(' ')}`);
+        log(`Executing: ${executable} ${args.join(' ')}`);
 
-        // Execute via CtrlComponent
-        // Use start() method with direct args (not startWithScript which uses -f flag)
-        const exitCode = await ctrl.start(args, {
-            timeout: options.timeout || 60000,
+        const exitCode = await runProcess(executable, args, {
+            timeout: options.timeout ?? 60000,
+            signal: options.signal,
+            env: options.env,
         });
 
-        // Handle abort signal
-        if (options.signal?.aborted) {
-            console.log('[TestRunner] Execution aborted');
-            // Clean up result files on abort
+        if (exitCode === null) {
+            log('Execution aborted');
             await deleteResultFiles(options.projectPath);
             return null;
         }
 
-        console.log(`[TestRunner] Process exited with code: ${exitCode}`);
+        log(`Process exited with code: ${exitCode}`);
         return exitCode;
     } catch (error) {
-        console.error('[TestRunner] Execution error:', error);
+        log(`Execution error: ${errorMessage(error)}`);
 
         // Clean up result files on error
         try {
@@ -156,15 +185,9 @@ async function executeTestInternal(
             // Ignore cleanup errors
         }
 
-        // Check if cancelled
-        if (options.signal?.aborted) {
-            return null;
-        }
-
-        return -1;
+        return options.signal?.aborted ? null : -1;
     }
 }
-
 /**
  * Execute multiple tests sequentially
  *
@@ -197,7 +220,7 @@ export async function executeMultipleTests(
     for (const test of tests) {
         // Check for cancellation before each test
         if (options.signal?.aborted) {
-            console.log('[TestRunner] Batch execution cancelled');
+            log('Batch execution cancelled');
             // Fill remaining with null
             results.push(...Array(tests.length - results.length).fill(null));
             break;
