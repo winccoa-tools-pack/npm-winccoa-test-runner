@@ -1,202 +1,264 @@
 #!/usr/bin/env node
+/**
+ * WinCC OA Test Runner CLI
+ * Headless test execution for CI/CD and automation
+ */
 
-import { PnlXmlConverter } from './converter';
-import { ConversionDirection } from './types';
-import type { ConversionOptions } from './types';
+import { Command } from 'commander';
+import * as path from 'path';
+import {
+    discoverTests,
+    executeTest,
+    executeTestFiles,
+    parseTestResults,
+    findResultFiles,
+} from './index.js';
+import {
+    formatDiscoveredTests,
+    formatDiscoveredTestsVerbose,
+    formatTestExecutionStart,
+    formatTestExecutionResult,
+    formatMultipleTestResults,
+    formatTestReport,
+    formatDiscoveredTestsJson,
+    formatTestReportJson,
+    formatTestReportJUnit,
+} from './formatters/index.js';
+
+const program = new Command();
+
+program
+    .name('winccoa-test')
+    .description('WinCC OA test runner - headless test execution and reporting')
+    .version('0.2.0');
+
+// Global options
+program
+    .option('--project <path>', 'WinCC OA project path')
+    .option('--install-path <path>', 'WinCC OA installation path')
+    .option('--oa-version <version>', 'WinCC OA version (e.g., 3.20)')
+    .option('--verbose', 'Enable verbose output');
 
 /**
- * CLI exit codes.
+ * Command: discover
+ * Discover all tests in a project
  */
-const EXIT_OK = 0;
-const EXIT_USAGE = 1;
-const EXIT_CONVERSION_FAILED = 2;
+program
+    .command('discover')
+    .description('Discover test files in a WinCC OA project')
+    .option('-s, --subdirectory <path>', 'Subdirectory to search (default: scripts)', 'scripts')
+    .option('-o, --output <format>', 'Output format: console, json', 'console')
+    .action(async (options) => {
+        try {
+            const projectPath = program.opts().project || process.cwd();
+            const verbose = program.opts().verbose;
 
-/**
- * Print usage information to stderr.
- */
-function printUsage(): void {
-    const bin = 'winccoa-pnl-xml';
-    process.stderr.write(
-        [
-            '',
-            `Usage: ${bin} <command> [options]`,
-            '',
-            'Commands:',
-            '  convert pnl-to-xml <path>   Convert .pnl panel(s) to XML',
-            '  convert xml-to-pnl <path>   Convert XML file(s) back to .pnl',
-            '',
-            'Options:',
-            '  -v, --version <ver>   WinCC OA version (e.g. 3.20)  [required]',
-            '  -c, --config <path>   WinCC OA project config file',
-            '  -o, --overwrite       Overwrite existing output files',
-            '  -t, --timeout <ms>    Process timeout in milliseconds (default: 60000)',
-            '  -h, --help            Show this help message',
-            '',
-            'Examples:',
-            `  ${bin} convert pnl-to-xml panels/myPanel.pnl -v 3.20`,
-            `  ${bin} convert xml-to-pnl panels/myPanel.xml -v 3.20 -o`,
-            `  ${bin} convert pnl-to-xml panels/ -v 3.20 --timeout 120000`,
-            '',
-        ].join('\n'),
-    );
-}
-
-/**
- * Minimal argument parser.
- * Returns the parsed CLI options or null when the input is invalid.
- */
-interface ParsedArgs {
-    direction: ConversionDirection;
-    inputPath: string;
-    version: string;
-    configPath?: string;
-    overwrite: boolean;
-    timeout?: number;
-}
-
-function parseArgs(argv: string[]): ParsedArgs | null {
-    // Strip node + script path
-    const args = argv.slice(2);
-
-    if (args.length === 0 || args.includes('-h') || args.includes('--help')) {
-        return null;
-    }
-
-    // Expect: convert <pnl-to-xml|xml-to-pnl> <path> [options]
-    if (args[0] !== 'convert') {
-        process.stderr.write(`Error: Unknown command "${args[0]}". Expected "convert".\n`);
-        return null;
-    }
-
-    const subCommand = args[1];
-    let direction: ConversionDirection;
-
-    if (subCommand === 'pnl-to-xml') {
-        direction = ConversionDirection.PNL_TO_XML;
-    } else if (subCommand === 'xml-to-pnl') {
-        direction = ConversionDirection.XML_TO_PNL;
-    } else {
-        process.stderr.write(
-            `Error: Unknown sub-command "${subCommand}". Expected "pnl-to-xml" or "xml-to-pnl".\n`,
-        );
-        return null;
-    }
-
-    const inputPath = args[2];
-    if (!inputPath || inputPath.startsWith('-')) {
-        process.stderr.write('Error: Missing input path.\n');
-        return null;
-    }
-
-    let version = '';
-    let configPath: string | undefined;
-    let overwrite = false;
-    let timeout: number | undefined;
-
-    // Parse remaining flags
-    let i = 3;
-    while (i < args.length) {
-        const flag = args[i];
-        switch (flag) {
-            case '-v':
-            case '--version':
-                version = args[++i] ?? '';
-                break;
-            case '-c':
-            case '--config':
-                configPath = args[++i] ?? '';
-                break;
-            case '-o':
-            case '--overwrite':
-                overwrite = true;
-                break;
-            case '-t':
-            case '--timeout': {
-                const raw = args[++i] ?? '';
-                const parsed = Number(raw);
-                if (isNaN(parsed) || parsed <= 0) {
-                    process.stderr.write(`Error: Invalid timeout value "${raw}".\n`);
-                    return null;
-                }
-                timeout = parsed;
-                break;
+            if (verbose) {
+                console.log(`[Discovery] Project: ${projectPath}`);
+                console.log(`[Discovery] Subdirectory: ${options.subdirectory}`);
             }
-            default:
-                process.stderr.write(`Error: Unknown option "${flag}".\n`);
-                return null;
+
+            // Discover tests
+            const tests = await discoverTests({
+                rootPath: projectPath,
+                subdirectory: options.subdirectory,
+            });
+
+            // Output results
+            if (options.output === 'json') {
+                console.log(formatDiscoveredTestsJson(tests));
+            } else {
+                // Console format
+                if (verbose) {
+                    console.log(formatDiscoveredTestsVerbose(tests, projectPath));
+                } else {
+                    console.log(formatDiscoveredTests(tests, projectPath));
+                }
+            }
+
+            process.exit(0);
+        } catch (error) {
+            console.error('❌ Discovery failed:', error);
+            process.exit(1);
         }
-        i++;
-    }
-
-    if (!version) {
-        process.stderr.write('Error: WinCC OA version is required (-v / --version).\n');
-        return null;
-    }
-
-    return { direction, inputPath, version, configPath, overwrite, timeout };
-}
+    });
 
 /**
- * Main CLI entry point.
+ * Command: run
+ * Execute tests
  */
-async function main(): Promise<void> {
-    const parsed = parseArgs(process.argv);
+program
+    .command('run')
+    .description('Execute WinCC OA tests')
+    .option('-f, --file <path>', 'Specific test file to run')
+    .option('-t, --test <id>', 'Specific test case ID to run')
+    .option('-a, --all', 'Run all tests in project')
+    .option('-o, --output-format <format>', 'Output format: console, json, junit', 'console')
+    .option('--timeout <ms>', 'Test timeout in milliseconds', '60000')
+    .action(async (options) => {
+        try {
+            const projectPath = program.opts().project || process.cwd();
+            const verbose = program.opts().verbose;
+            const timeout = parseInt(options.timeout, 10);
 
-    if (!parsed) {
-        printUsage();
-        process.exitCode = EXIT_USAGE;
-        return;
-    }
+            if (verbose) {
+                console.log(`[Execution] Project: ${projectPath}`);
+                console.log(`[Execution] Timeout: ${timeout}ms`);
+            }
 
-    const options: ConversionOptions = {
-        version: parsed.version,
-        inputPath: parsed.inputPath,
-        configPath: parsed.configPath,
-        overwrite: parsed.overwrite,
-        timeout: parsed.timeout,
-    };
+            // Execution options
+            const execOptions = {
+                projectPath,
+                installPath: program.opts().installPath,
+                version: program.opts().oaVersion,
+                timeout,
+            };
 
-    const directionLabel =
-        parsed.direction === ConversionDirection.PNL_TO_XML ? 'PNL → XML' : 'XML → PNL';
+            let exitCode: number | null = 0;
 
-    process.stderr.write(`Converting ${directionLabel}: ${parsed.inputPath}\n`);
+            // Run specific file
+            if (options.file) {
+                const filePath = path.isAbsolute(options.file)
+                    ? options.file
+                    : path.join(projectPath, options.file);
 
-    try {
-        const converter = new PnlXmlConverter();
-        const result = await converter.convert(options, parsed.direction);
+                console.log(formatTestExecutionStart(filePath, options.test, projectPath));
 
-        if (result.stdout) {
-            process.stdout.write(result.stdout);
+                exitCode = await executeTest(filePath, execOptions, options.test);
+
+                console.log(formatTestExecutionResult(exitCode));
+            }
+            // Run all tests
+            else if (options.all) {
+                console.log(`\n🚀 Running all tests in project...\n`);
+
+                // Discover tests first
+                const tests = await discoverTests({
+                    rootPath: projectPath,
+                    subdirectory: 'scripts',
+                });
+
+                console.log(`Found ${tests.length} test file(s)\n`);
+
+                // Execute all
+                const results = await executeTestFiles(tests, execOptions);
+
+                // Show results
+                console.log(formatMultipleTestResults(results, projectPath));
+
+                exitCode = results.some((r) => r.exitCode !== 0) ? 1 : 0;
+            } else {
+                console.error('❌ No test specified. Use --file, --test, or --all');
+                process.exit(1);
+            }
+
+            // Parse results if available (parse regardless of exit code)
+            console.log(`\n📋 Parsing test results...`);
+
+            const resultFiles = await findResultFiles(projectPath);
+
+            if (resultFiles.fullResult) {
+                const result = await parseTestResults({
+                    resultPath: resultFiles.fullResult,
+                    projectPath,
+                });
+
+                if (options.outputFormat === 'json') {
+                    console.log(
+                        formatTestReportJson(result.summary, result.results, result.environment),
+                    );
+                } else if (options.outputFormat === 'junit') {
+                    console.log(formatTestReportJUnit(result.summary, result.results));
+                } else {
+                    // Console format
+                    console.log(
+                        formatTestReport(result.summary, result.results, result.environment),
+                    );
+                }
+
+                // Set exit code based on test results
+                exitCode = result.summary.failed > 0 ? 1 : 0;
+            } else {
+                console.log('   ⚠️  No result files found (fullResult.json)');
+                console.log('   Note: Test may have failed before writing results.');
+            }
+
+            process.exit(exitCode === 0 ? 0 : 1);
+        } catch (error) {
+            console.error('❌ Execution failed:', error);
+            process.exit(1);
         }
-        if (result.stderr) {
-            process.stderr.write(result.stderr);
-        }
+    });
 
-        if (result.success) {
-            process.stderr.write('Conversion completed successfully.\n');
-            process.exitCode = EXIT_OK;
-        } else {
-            process.stderr.write(`Conversion failed with exit code ${result.exitCode}.\n`);
-            process.exitCode = EXIT_CONVERSION_FAILED;
+/**
+ * Command: parse
+ * Parse existing test results
+ */
+program
+    .command('parse')
+    .description('Parse test results from fullResult.json or log files')
+    .option('-r, --result-file <path>', 'Path to result file')
+    .option('-f, --format <format>', 'Result format: auto, json, log', 'auto')
+    .option('-o, --output <format>', 'Output format: console, json, junit', 'console')
+    .action(async (options) => {
+        try {
+            const projectPath = program.opts().project || process.cwd();
+            const verbose = program.opts().verbose;
+
+            // Determine result file path
+            let resultPath = options.resultFile;
+
+            if (!resultPath) {
+                // Try to find fullResult.json in project
+                const resultFiles = await findResultFiles(projectPath);
+                resultPath = resultFiles.fullResult;
+
+                if (!resultPath) {
+                    console.error('❌ No result file found. Specify with --result-file');
+                    process.exit(1);
+                }
+            } else if (!path.isAbsolute(resultPath)) {
+                resultPath = path.join(projectPath, resultPath);
+            }
+
+            if (verbose) {
+                console.log(`[Parser] Result file: ${resultPath}`);
+                console.log(`[Parser] Format: ${options.format}`);
+            }
+
+            // Parse results
+            const result = await parseTestResults({
+                resultPath,
+                format: options.format,
+                projectPath,
+            });
+
+            // Output results
+            if (options.output === 'json') {
+                console.log(
+                    formatTestReportJson(result.summary, result.results, result.environment),
+                );
+            } else if (options.output === 'junit') {
+                console.log(formatTestReportJUnit(result.summary, result.results));
+            } else {
+                // Console format
+                console.log(`\n📊 Test Results from: ${path.basename(resultPath)}`);
+                console.log(formatTestReport(result.summary, result.results, result.environment));
+            }
+
+            // Exit with appropriate code
+            const hasFailures = result.summary.failed > 0 || result.summary.aborted > 0;
+            process.exit(hasFailures ? 1 : 0);
+        } catch (error) {
+            console.error('❌ Parse failed:', error);
+            process.exit(1);
         }
-    } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        process.stderr.write(`Error: ${message}\n`);
-        process.exitCode = EXIT_CONVERSION_FAILED;
-    }
+    });
+
+// Parse arguments
+program.parse(process.argv);
+
+// Show help if no command provided
+if (!process.argv.slice(2).length) {
+    program.outputHelp();
 }
-
-// Auto-run only when invoked directly (not when imported for testing)
-const isDirectRun =
-    process.argv[1] &&
-    (process.argv[1].endsWith('cli.js') ||
-        process.argv[1].endsWith('cli.ts') ||
-        process.argv[1].endsWith('cli.cjs') ||
-        process.argv[1].endsWith('cli.mjs'));
-
-if (isDirectRun) {
-    main();
-}
-
-// Export for testing
-export { parseArgs, printUsage, main };

@@ -1,7 +1,7 @@
 {
   "name": "@winccoa-tools-pack/npm-winccoa-test-runner",
   "version": "0.2.0",
-  "description": "WinCC OA Test Runner – execute and manage WinCC OA test suites",
+  "description": "WinCC OA test runner - headless test execution API and CLI for OaTest framework",
   "author": "winccoa-tools-pack",
   "license": "MIT",
   "main": "dist/cjs/index.js",
@@ -13,19 +13,20 @@
       "require": "./dist/cjs/index.js",
       "types": "./dist/index.d.ts"
     },
-    "./utils/*": {
-      "import": "./dist/esm/utils/*.js",
-      "require": "./dist/cjs/utils/*.js",
-      "types": "./dist/utils/*.d.ts"
+    "./api": {
+      "import": "./dist/esm/api.js",
+      "require": "./dist/cjs/api.js",
+      "types": "./dist/api.d.ts"
     },
-    "./types/*": {
-      "import": "./dist/esm/types/*.js",
-      "require": "./dist/cjs/types/*.js",
-      "types": "./dist/types/*.d.ts"
+    "./types": {
+      "import": "./dist/esm/types/index.js",
+      "require": "./dist/cjs/types/index.js",
+      "types": "./dist/types/index.d.ts"
     }
   },
   "bin": {
-    "winccoa-test-runner": "./dist/cjs/cli.js"
+    "winccoa-test-runner": "./dist/cjs/cli.js",
+    "winccoa-test": "./dist/cjs/cli.js"
   },
   "files": [
     "dist"
@@ -51,7 +52,9 @@
     "ci:integration": "npm ci && npm run build && npm run test:integration"
   },
   "dependencies": {
-    "@winccoa-tools-pack/npm-winccoa-core": "^2.0.8"
+    "@winccoa-tools-pack/npm-winccoa-core": "^2.0.8",
+    "chalk": "^4.1.2",
+    "commander": "^14.0.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -68,13 +71,13 @@
     "typescript": "^5.2.0",
     "typescript-eslint": "^8.73.0"
   },
-  "overrides": {
-    "katex": "^0.18.2"
-  },
   "config": {
     "winccoaImage": "mpokornyetm/winccoa-tools-pack-npm-winccoa-core:npm-winccoa-core"
   },
   "engines": {
     "node": ">=20"
+  },
+  "overrides": {
+    "katex": "^0.18.2"
   }
 }
