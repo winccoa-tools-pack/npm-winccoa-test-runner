@@ -35,13 +35,13 @@ Part of the [winccoa-tools-pack](https://github.com/winccoa-tools-pack) ecosyste
 ## 📦 Installation
 
 ```shell
-npm install @winccoa-tools-pack/test-runner
+npm install @winccoa-tools-pack/npm-winccoa-test-runner
 ```
 
 Or globally for CLI usage:
 
 ```shell
-npm install -g @winccoa-tools-pack/test-runner
+npm install -g @winccoa-tools-pack/npm-winccoa-test-runner
 ```
 
 ## 🖥 CLI Usage
@@ -112,7 +112,7 @@ Use the test runner programmatically in your Node.js/TypeScript projects:
 ### Discovery API
 
 ```typescript
-import { discoverTests, parseSingleTestFile } from '@winccoa-tools-pack/test-runner';
+import { discoverTests, parseSingleTestFile } from '@winccoa-tools-pack/npm-winccoa-test-runner';
 
 // Discover all tests in a project
 const tests = await discoverTests({
@@ -139,7 +139,7 @@ if (testFile) {
 ### Execution API
 
 ```typescript
-import { executeTest, executeTestFiles } from '@winccoa-tools-pack/test-runner';
+import { executeTest, executeTestFiles } from '@winccoa-tools-pack/npm-winccoa-test-runner';
 
 // Execute a single test
 const exitCode = await executeTest(
@@ -172,7 +172,7 @@ for (const result of results) {
 ### Parsing API
 
 ```typescript
-import { parseTestResults, findResultFiles } from '@winccoa-tools-pack/test-runner';
+import { parseTestResults, findResultFiles } from '@winccoa-tools-pack/npm-winccoa-test-runner';
 
 // Find result files in project
 const resultFiles = await findResultFiles('/path/to/project');
@@ -205,7 +205,7 @@ for (const test of result.results) {
 import { 
     formatDiscoveredTests, 
     formatTestReportJUnit 
-} from '@winccoa-tools-pack/test-runner';
+} from '@winccoa-tools-pack/npm-winccoa-test-runner';
 
 // Console output
 const consoleOutput = formatDiscoveredTests(tests, '/path/to/project');
@@ -276,7 +276,7 @@ jobs:
           node-version: '20'
       
       - name: Install dependencies
-        run: npm install -g @winccoa-tools-pack/test-runner
+        run: npm install -g @winccoa-tools-pack/npm-winccoa-test-runner
       
       - name: Run tests
         run: |
@@ -300,7 +300,7 @@ pipeline {
         stage('Test') {
             steps {
                 sh '''
-                    npm install -g @winccoa-tools-pack/test-runner
+                    npm install -g @winccoa-tools-pack/npm-winccoa-test-runner
                     winccoa-test run --all \
                         --project ./my-project \
                         --output-format junit > test-results.xml
